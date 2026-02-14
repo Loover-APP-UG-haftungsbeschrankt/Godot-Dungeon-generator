@@ -63,8 +63,9 @@ func generate() -> bool:
 		push_error("DungeonGenerator: No rooms with connections found")
 		return false
 	
-	# Place the first room at origin
-	var first_placement = PlacedRoom.new(start_room, Vector2i.ZERO, RoomRotator.Rotation.DEG_0)
+	# Place the first room at origin (clone it to avoid modifying the template)
+	var first_room_clone = start_room.clone()
+	var first_placement = PlacedRoom.new(first_room_clone, Vector2i.ZERO, RoomRotator.Rotation.DEG_0)
 	_place_room(first_placement)
 	
 	# Generate remaining rooms using random walk

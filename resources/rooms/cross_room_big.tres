@@ -1,0 +1,155 @@
+[gd_resource type="Resource" script_class="MetaRoom" format=3 uid="uid://gme2xlqd47pm"]
+
+[ext_resource type="Script" uid="uid://b8mln4ttmne08" path="res://scripts/meta_cell.gd" id="1_ksil1"]
+[ext_resource type="Script" uid="uid://8fcsrahvylh8" path="res://scripts/meta_room.gd" id="2_govof"]
+
+[sub_resource type="Resource" id="Resource_ksil1"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_govof"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_up = true
+
+[sub_resource type="Resource" id="Resource_a4ffd"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_up = true
+
+[sub_resource type="Resource" id="Resource_aim6j"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_up = true
+
+[sub_resource type="Resource" id="Resource_0xjug"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_up = true
+
+[sub_resource type="Resource" id="Resource_wwt0u"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_ao55k"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_left = true
+
+[sub_resource type="Resource" id="Resource_vgyit"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_m3beh"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_was01"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_t7ah2"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_nehpk"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_right = true
+
+[sub_resource type="Resource" id="Resource_ou8q6"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_left = true
+
+[sub_resource type="Resource" id="Resource_ckay2"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_mvytp"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_ke7aj"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_x6rkq"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_xfq2k"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_right = true
+
+[sub_resource type="Resource" id="Resource_h82a5"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_left = true
+
+[sub_resource type="Resource" id="Resource_x6fg2"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_uj823"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_t4xn0"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_gwe0c"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_g0jcw"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_right = true
+
+[sub_resource type="Resource" id="Resource_70o08"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_left = true
+
+[sub_resource type="Resource" id="Resource_2awi4"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_qvlha"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_pdp2x"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_eam0s"]
+script = ExtResource("1_ksil1")
+
+[sub_resource type="Resource" id="Resource_fh2ok"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_right = true
+
+[sub_resource type="Resource" id="Resource_xiqbj"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_5pyen"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_bottom = true
+
+[sub_resource type="Resource" id="Resource_w4w1f"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_bottom = true
+
+[sub_resource type="Resource" id="Resource_sde51"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_bottom = true
+
+[sub_resource type="Resource" id="Resource_rv8wj"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+connection_bottom = true
+
+[sub_resource type="Resource" id="Resource_qwrqd"]
+script = ExtResource("1_ksil1")
+cell_type = 0
+
+[resource]
+script = ExtResource("2_govof")
+width = 6
+height = 6
+cells = Array[ExtResource("1_ksil1")]([SubResource("Resource_ksil1"), SubResource("Resource_govof"), SubResource("Resource_a4ffd"), SubResource("Resource_aim6j"), SubResource("Resource_0xjug"), SubResource("Resource_wwt0u"), SubResource("Resource_ao55k"), SubResource("Resource_vgyit"), SubResource("Resource_m3beh"), SubResource("Resource_was01"), SubResource("Resource_t7ah2"), SubResource("Resource_nehpk"), SubResource("Resource_ou8q6"), SubResource("Resource_ckay2"), SubResource("Resource_mvytp"), SubResource("Resource_ke7aj"), SubResource("Resource_x6rkq"), SubResource("Resource_xfq2k"), SubResource("Resource_h82a5"), SubResource("Resource_x6fg2"), SubResource("Resource_uj823"), SubResource("Resource_t4xn0"), SubResource("Resource_gwe0c"), SubResource("Resource_g0jcw"), SubResource("Resource_70o08"), SubResource("Resource_2awi4"), SubResource("Resource_qvlha"), SubResource("Resource_pdp2x"), SubResource("Resource_eam0s"), SubResource("Resource_fh2ok"), SubResource("Resource_xiqbj"), SubResource("Resource_5pyen"), SubResource("Resource_w4w1f"), SubResource("Resource_sde51"), SubResource("Resource_rv8wj"), SubResource("Resource_qwrqd")])
+room_name = "Cross Room Medium"

@@ -1,0 +1,114 @@
+[gd_resource type="Resource" script_class="MetaRoom" format=3 uid="uid://dhhmoufmttueg"]
+
+[ext_resource type="Script" uid="uid://8fcsrahvylh8" path="res://scripts/meta_room.gd" id="1_meta_room"]
+[ext_resource type="Script" uid="uid://b8mln4ttmne08" path="res://scripts/meta_cell.gd" id="2_meta_cell"]
+
+[sub_resource type="Resource" id="Resource_qkec5"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_074d4"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+connection_up = true
+
+[sub_resource type="Resource" id="Resource_fdcl7"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+connection_up = true
+
+[sub_resource type="Resource" id="Resource_ublls"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+connection_up = true
+
+[sub_resource type="Resource" id="Resource_icqpv"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_rdx3a"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+connection_left = true
+
+[sub_resource type="Resource" id="Resource_x2f0t"]
+script = ExtResource("2_meta_cell")
+
+[sub_resource type="Resource" id="Resource_owess"]
+script = ExtResource("2_meta_cell")
+
+[sub_resource type="Resource" id="Resource_8cgux"]
+script = ExtResource("2_meta_cell")
+
+[sub_resource type="Resource" id="Resource_5rpa5"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+connection_right = true
+
+[sub_resource type="Resource" id="Resource_sibo2"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+connection_left = true
+
+[sub_resource type="Resource" id="Resource_j5khr"]
+script = ExtResource("2_meta_cell")
+
+[sub_resource type="Resource" id="Resource_s42ap"]
+script = ExtResource("2_meta_cell")
+
+[sub_resource type="Resource" id="Resource_yxtgp"]
+script = ExtResource("2_meta_cell")
+
+[sub_resource type="Resource" id="Resource_soyw5"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+connection_right = true
+
+[sub_resource type="Resource" id="Resource_54lsw"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+connection_left = true
+
+[sub_resource type="Resource" id="Resource_vaevh"]
+script = ExtResource("2_meta_cell")
+
+[sub_resource type="Resource" id="Resource_m0iem"]
+script = ExtResource("2_meta_cell")
+
+[sub_resource type="Resource" id="Resource_ituxr"]
+script = ExtResource("2_meta_cell")
+
+[sub_resource type="Resource" id="Resource_xbt7y"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+connection_right = true
+
+[sub_resource type="Resource" id="Resource_tdb4e"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_m6v6r"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+connection_bottom = true
+
+[sub_resource type="Resource" id="Resource_fb61j"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+connection_bottom = true
+
+[sub_resource type="Resource" id="Resource_45vym"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+connection_bottom = true
+
+[sub_resource type="Resource" id="Resource_0k602"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[resource]
+script = ExtResource("1_meta_room")
+width = 5
+height = 5
+cells = Array[ExtResource("2_meta_cell")]([SubResource("Resource_qkec5"), SubResource("Resource_074d4"), SubResource("Resource_fdcl7"), SubResource("Resource_ublls"), SubResource("Resource_icqpv"), SubResource("Resource_rdx3a"), SubResource("Resource_x2f0t"), SubResource("Resource_owess"), SubResource("Resource_8cgux"), SubResource("Resource_5rpa5"), SubResource("Resource_sibo2"), SubResource("Resource_j5khr"), SubResource("Resource_s42ap"), SubResource("Resource_yxtgp"), SubResource("Resource_soyw5"), SubResource("Resource_54lsw"), SubResource("Resource_vaevh"), SubResource("Resource_m0iem"), SubResource("Resource_ituxr"), SubResource("Resource_xbt7y"), SubResource("Resource_tdb4e"), SubResource("Resource_m6v6r"), SubResource("Resource_fb61j"), SubResource("Resource_45vym"), SubResource("Resource_0k602")])
+room_name = "Cross Room Medium"

@@ -1,17 +1,22 @@
 [gd_scene format=3 uid="uid://ca3sxg8wqw8rx"]
 
 [ext_resource type="Script" uid="uid://bqlh65ycgxilk" path="res://scripts/dungeon_generator.gd" id="1"]
+[ext_resource type="Resource" uid="uid://dhhmoufmttueg" path="res://resources/rooms/cross_room_medium.tres" id="2"]
 [ext_resource type="Script" uid="uid://8fcsrahvylh8" path="res://scripts/meta_room.gd" id="2_b1d4m"]
+[ext_resource type="Resource" uid="uid://ca6ym2hdsyh2y" path="res://resources/rooms/l_corridor.tres" id="3"]
+[ext_resource type="Resource" uid="uid://b7wy1g8ynxhyy" path="res://resources/rooms/straight_corridor.tres" id="4"]
 [ext_resource type="Resource" uid="uid://cjpb1o6iycdxp" path="res://resources/rooms/t_room.tres" id="5"]
 [ext_resource type="Script" uid="uid://bpv3x8un1m5hh" path="res://scripts/dungeon_visualizer.gd" id="6"]
 [ext_resource type="Script" uid="uid://bnpcxmps3damk" path="res://scripts/camera_controller.gd" id="7"]
+[ext_resource type="Resource" uid="uid://cw1u82peba56v" path="res://resources/rooms/cross_room_small.tres" id="7_u7w57"]
+[ext_resource type="Resource" uid="uid://gme2xlqd47pm" path="res://resources/rooms/cross_room_big.tres" id="8_us072"]
 
 [node name="TestDungeon" type="Node2D" unique_id=1865828730]
 
 [node name="DungeonGenerator" type="Node" parent="." unique_id=1563054712]
 script = ExtResource("1")
-room_templates = Array[ExtResource("2_b1d4m")]([ExtResource("5")])
-target_room_count = 2
+room_templates = Array[ExtResource("2_b1d4m")]([ExtResource("5"), ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("7_u7w57"), ExtResource("8_us072")])
+target_room_count = 200
 generation_seed = 978639432
 
 [node name="DungeonVisualizer" type="Node2D" parent="." unique_id=1074786944]

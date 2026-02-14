@@ -1,0 +1,79 @@
+[gd_resource type="Resource" script_class="MetaRoom" format=3 uid="uid://cw1u82peba56v"]
+
+[ext_resource type="Script" uid="uid://b8mln4ttmne08" path="res://scripts/meta_cell.gd" id="1_wkk4q"]
+[ext_resource type="Script" uid="uid://8fcsrahvylh8" path="res://scripts/meta_room.gd" id="2_wwrgi"]
+
+[sub_resource type="Resource" id="Resource_wkk4q"]
+script = ExtResource("1_wkk4q")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_wwrgi"]
+script = ExtResource("1_wkk4q")
+cell_type = 0
+connection_up = true
+
+[sub_resource type="Resource" id="Resource_b7u5m"]
+script = ExtResource("1_wkk4q")
+cell_type = 0
+connection_up = true
+
+[sub_resource type="Resource" id="Resource_751ow"]
+script = ExtResource("1_wkk4q")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_206io"]
+script = ExtResource("1_wkk4q")
+cell_type = 0
+connection_left = true
+
+[sub_resource type="Resource" id="Resource_xw5t3"]
+script = ExtResource("1_wkk4q")
+
+[sub_resource type="Resource" id="Resource_4h5rx"]
+script = ExtResource("1_wkk4q")
+
+[sub_resource type="Resource" id="Resource_av8j0"]
+script = ExtResource("1_wkk4q")
+cell_type = 0
+connection_right = true
+
+[sub_resource type="Resource" id="Resource_y8vfx"]
+script = ExtResource("1_wkk4q")
+cell_type = 0
+connection_left = true
+
+[sub_resource type="Resource" id="Resource_ds25w"]
+script = ExtResource("1_wkk4q")
+
+[sub_resource type="Resource" id="Resource_26kfo"]
+script = ExtResource("1_wkk4q")
+
+[sub_resource type="Resource" id="Resource_ucoft"]
+script = ExtResource("1_wkk4q")
+cell_type = 0
+connection_right = true
+
+[sub_resource type="Resource" id="Resource_fak7l"]
+script = ExtResource("1_wkk4q")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_7vxbf"]
+script = ExtResource("1_wkk4q")
+cell_type = 0
+connection_bottom = true
+
+[sub_resource type="Resource" id="Resource_14dv0"]
+script = ExtResource("1_wkk4q")
+cell_type = 0
+connection_bottom = true
+
+[sub_resource type="Resource" id="Resource_7s3po"]
+script = ExtResource("1_wkk4q")
+cell_type = 0
+
+[resource]
+script = ExtResource("2_wwrgi")
+width = 4
+height = 4
+cells = Array[ExtResource("1_wkk4q")]([SubResource("Resource_wkk4q"), SubResource("Resource_wwrgi"), SubResource("Resource_b7u5m"), SubResource("Resource_751ow"), SubResource("Resource_206io"), SubResource("Resource_xw5t3"), SubResource("Resource_4h5rx"), SubResource("Resource_av8j0"), SubResource("Resource_y8vfx"), SubResource("Resource_ds25w"), SubResource("Resource_26kfo"), SubResource("Resource_ucoft"), SubResource("Resource_fak7l"), SubResource("Resource_7vxbf"), SubResource("Resource_14dv0"), SubResource("Resource_7s3po")])
+room_name = "Cross Room Small"

@@ -81,25 +81,56 @@ Room A    +    Room B    =    Combined (5 cells, not 6)
 
 See `ROOM_OVERLAP_SYSTEM.md` for technical details and `ROOM_OVERLAP_EXAMPLES.md` for visual examples.
 
-### 5. Dungeon Generation Algorithm
+### 5. Resource Cloning and Safe Modifications
+
+To enable safe modifications during dungeon generation (like setting cell types to DOOR at connection points), the generator **clones all rooms before placement**:
+
+- **Template Preservation**: Original room templates remain unchanged
+- **Safe Modifications**: Placed rooms can be modified without affecting templates
+- **Door Placement**: Overlapping cells with opposite connections can be converted to DOOR type
+- **Reproducibility**: Each generation starts with clean templates
+
+**How it works:**
+```gdscript
+# First room is explicitly cloned
+var first_room_clone = start_room.clone()
+var first_placement = PlacedRoom.new(first_room_clone, ...)
+
+# Rotated rooms are automatically cloned by RoomRotator
+var rotated_room = RoomRotator.rotate_room(template, rotation)  # Returns clone
+```
+
+This allows you to safely implement features like:
+- Converting overlapping blocked cells to DOOR type when they have opposite connections
+- Modifying cell properties during placement
+- Implementing custom room merging logic
+
+See `DOOR_PLACEMENT_FIX.md` for detailed explanation of this system.
+
+### 6. Dungeon Generation Algorithm
 
 The generator uses a **room-based random walk**:
 
 1. Start with a random room that has connections
-2. Place it at the origin
-3. Pick a random connection point from the current room
-4. Pick a random room template from available rooms
-5. Try all 4 rotations to find a matching connection
-6. Check if the room can be placed (allowing blocked cell overlaps)
-7. If valid, place the room, merge overlapping connections, and move to it
-8. Repeat until target room count or no valid placements
+2. **Clone it** to avoid modifying the template
+3. Place it at the origin
+4. Pick a random connection point from the current room
+5. Pick a random room template from available rooms
+6. Try all 4 rotations to find a matching connection (**rotations return clones**)
+7. Check if the room can be placed (allowing blocked cell overlaps)
+8. If valid, **place the cloned room**, merge overlapping connections, and move to it
+9. Repeat until target room count or no valid placements
 
 Key features:
+- **All placed rooms are clones** - templates remain unchanged
 - Prevents revisiting previously visited rooms
 - Smart connection matching (opposite directions)
 - Allows blocked-blocked overlaps for compact dungeons
 - Merges opposing connections in overlapping cells
+- Supports safe cell type modifications (e.g., door placement)
 - Maximum attempts limit to avoid infinite loops
+
+## Usage
 
 ## Usage
 

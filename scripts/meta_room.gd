@@ -78,8 +78,8 @@ func get_connection_points() -> Array[ConnectionPoint]:
 	for y in range(height):
 		for x in range(width):
 			var cell = get_cell(x, y)
-			if cell == null or cell.cell_type == MetaCell.CellType.BLOCKED:
-				continue
+			#if cell == null or cell.cell_type == MetaCell.CellType.BLOCKED:
+			#	continue
 			
 			# Check UP connection (y = 0)
 			if y == 0 and cell.connection_up:

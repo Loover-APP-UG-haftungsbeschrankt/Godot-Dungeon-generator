@@ -1,83 +1,74 @@
-[gd_resource type="Resource" script_class="MetaRoom" load_steps=12 format=3 uid="uid://l_corridor"]
+[gd_resource type="Resource" script_class="MetaRoom" format=3 uid="uid://ca6ym2hdsyh2y"]
 
-[ext_resource type="Script" path="res://scripts/meta_room.gd" id="1_meta_room"]
-[ext_resource type="Script" path="res://scripts/meta_cell.gd" id="2_meta_cell"]
+[ext_resource type="Script" uid="uid://8fcsrahvylh8" path="res://scripts/meta_room.gd" id="1_meta_room"]
+[ext_resource type="Script" uid="uid://b8mln4ttmne08" path="res://scripts/meta_cell.gd" id="2_meta_cell"]
 
-[sub_resource type="Resource" id="MetaCell_1"]
-script = ExtResource("2_meta_cell")
-cell_type = 1
-connection_up = false
-connection_right = false
-connection_bottom = false
-connection_left = true
-
-[sub_resource type="Resource" id="MetaCell_2"]
-script = ExtResource("2_meta_cell")
-cell_type = 1
-connection_up = false
-connection_right = false
-connection_bottom = false
-connection_left = false
-
-[sub_resource type="Resource" id="MetaCell_3"]
-script = ExtResource("2_meta_cell")
-cell_type = 1
-connection_up = true
-connection_right = false
-connection_bottom = false
-connection_left = false
-
-[sub_resource type="Resource" id="MetaCell_4"]
-script = ExtResource("2_meta_cell")
-cell_type = 1
-connection_up = false
-connection_right = false
-connection_bottom = false
-connection_left = false
-
-[sub_resource type="Resource" id="MetaCell_5"]
+[sub_resource type="Resource" id="Resource_56i2d"]
 script = ExtResource("2_meta_cell")
 cell_type = 0
-connection_up = false
-connection_right = false
-connection_bottom = false
-connection_left = false
 
-[sub_resource type="Resource" id="MetaCell_6"]
+[sub_resource type="Resource" id="Resource_fhs2v"]
 script = ExtResource("2_meta_cell")
 cell_type = 0
-connection_up = false
-connection_right = false
-connection_bottom = false
-connection_left = false
 
-[sub_resource type="Resource" id="MetaCell_7"]
+[sub_resource type="Resource" id="Resource_h1pok"]
 script = ExtResource("2_meta_cell")
-cell_type = 1
-connection_up = false
-connection_right = false
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_g1lr6"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_vtwov"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_w1ygr"]
+script = ExtResource("2_meta_cell")
+
+[sub_resource type="Resource" id="Resource_ki4r4"]
+script = ExtResource("2_meta_cell")
+
+[sub_resource type="Resource" id="Resource_fpp18"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+connection_right = true
+
+[sub_resource type="Resource" id="Resource_60i0f"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_w4msp"]
+script = ExtResource("2_meta_cell")
+
+[sub_resource type="Resource" id="Resource_v445h"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_83cgi"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_kndw5"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_h8at3"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
 connection_bottom = true
-connection_left = false
 
-[sub_resource type="Resource" id="MetaCell_8"]
+[sub_resource type="Resource" id="Resource_qtdod"]
 script = ExtResource("2_meta_cell")
 cell_type = 0
-connection_up = false
-connection_right = false
-connection_bottom = false
-connection_left = false
 
-[sub_resource type="Resource" id="MetaCell_9"]
+[sub_resource type="Resource" id="Resource_p4h8l"]
 script = ExtResource("2_meta_cell")
 cell_type = 0
-connection_up = false
-connection_right = false
-connection_bottom = false
-connection_left = false
 
 [resource]
 script = ExtResource("1_meta_room")
-width = 3
-height = 3
-cells = Array[Resource]([SubResource("MetaCell_1"), SubResource("MetaCell_2"), SubResource("MetaCell_3"), SubResource("MetaCell_4"), SubResource("MetaCell_5"), SubResource("MetaCell_6"), SubResource("MetaCell_7"), SubResource("MetaCell_8"), SubResource("MetaCell_9")])
+width = 4
+height = 4
+cells = Array[ExtResource("2_meta_cell")]([SubResource("Resource_56i2d"), SubResource("Resource_fhs2v"), SubResource("Resource_h1pok"), SubResource("Resource_g1lr6"), SubResource("Resource_vtwov"), SubResource("Resource_w1ygr"), SubResource("Resource_ki4r4"), SubResource("Resource_fpp18"), SubResource("Resource_60i0f"), SubResource("Resource_w4msp"), SubResource("Resource_v445h"), SubResource("Resource_83cgi"), SubResource("Resource_kndw5"), SubResource("Resource_h8at3"), SubResource("Resource_qtdod"), SubResource("Resource_p4h8l")])
 room_name = "L-Corridor"

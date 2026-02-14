@@ -68,7 +68,7 @@ validate_gdscript() {
     fi
     
     # Check for common typos
-    if grep -q "fucn\|retrun\|esle\|fi\|done" "$file"; then
+    if grep -q "fucn\|retrun\|esle" "$file"; then
         echo "  ⚠ Warning: Possible typos detected"
         errors=$((errors + 1))
     fi

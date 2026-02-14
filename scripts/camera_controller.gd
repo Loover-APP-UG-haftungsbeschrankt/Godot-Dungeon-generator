@@ -22,8 +22,8 @@ extends Camera2D
 @export var enable_right_button_pan: bool = true
 
 ## Touchpad gesture settings
-@export var touchpad_pan_speed: float = 2.0
-@export var touchpad_zoom_speed: float = 0.5
+@export var touchpad_pan_speed: float = 4.0
+@export var touchpad_zoom_speed: float = 1.0
 
 # Internal state
 var _is_panning: bool = false
@@ -151,7 +151,7 @@ func _handle_touchpad_pan(delta: Vector2) -> void:
 	var world_delta = delta * touchpad_pan_speed / zoom.x
 	
 	# Apply movement (negative because we're moving the camera, not the content)
-	position -= world_delta
+	position += world_delta
 
 
 func _handle_touchpad_zoom(point: Vector2, factor: float) -> void:

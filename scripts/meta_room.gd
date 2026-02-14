@@ -18,6 +18,11 @@ extends Resource
 ## Name identifier for this room template
 @export var room_name: String = "Room"
 
+## Array of connection directions that MUST be connected to other rooms
+## Example: [Direction.UP, Direction.LEFT, Direction.RIGHT] for a T-room
+## Empty array means no required connections (all are optional)
+@export var required_connections: Array[MetaCell.Direction] = []
+
 
 func _init() -> void:
 	# Initialize with empty cells if needed
@@ -111,6 +116,7 @@ func clone() -> MetaRoom:
 	new_room.width = width
 	new_room.height = height
 	new_room.room_name = room_name
+	new_room.required_connections = required_connections.duplicate()
 	new_room.cells.clear()
 	
 	for cell in cells:

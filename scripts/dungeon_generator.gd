@@ -362,7 +362,7 @@ func _count_total_cells() -> int:
 		for y in range(placement.room.height):
 			for x in range(placement.room.width):
 				var cell = placement.room.get_cell(x, y)
-				if cell != null:
+				if cell != null && cell.cell_type == MetaCell.CellType.FLOOR:
 					total += 1
 	
 	return total

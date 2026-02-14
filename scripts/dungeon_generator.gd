@@ -138,9 +138,12 @@ func generate() -> bool:
 	
 	# Main generation loop - continue until target cell count is reached
 	var iterations = 0
+	var failed_placement_streak = 0  # Track consecutive failed placements
 	
 	while _count_total_cells() < target_meta_cell_count and iterations < max_iterations:
 		iterations += 1
+		
+		var any_room_placed_this_iteration = false
 		
 		# Each walker attempts to place one room
 		for walker in active_walkers:
@@ -153,6 +156,8 @@ func generate() -> bool:
 			if placed:
 				walker.rooms_placed += 1
 				walker.check_death()
+				any_room_placed_this_iteration = true
+				failed_placement_streak = 0  # Reset streak on successful placement
 				
 				# If walker died, spawn a new one
 				if not walker.is_alive:
@@ -170,12 +175,30 @@ func generate() -> bool:
 			# Check if we've reached target cell count
 			if _count_total_cells() >= target_meta_cell_count:
 				break
+		
+		# Check if all templates are exhausted (no rooms placed for multiple iterations)
+		if not any_room_placed_this_iteration:
+			failed_placement_streak += 1
+			
+			# If we've failed to place rooms for num_walkers consecutive iterations,
+			# all templates are likely exhausted - terminate early
+			if failed_placement_streak >= num_walkers:
+				print("DungeonGenerator: All room templates exhausted. Stopping generation.")
+				print("  Templates available: ", room_templates.size())
+				print("  Templates used: ", used_room_templates.size())
+				break
+		
+		# Break if target reached
+		if _count_total_cells() >= target_meta_cell_count:
+			break
 	
 	var cell_count = _count_total_cells()
 	var success = cell_count >= target_meta_cell_count
 	generation_complete.emit(success, placed_rooms.size(), cell_count)
 	
 	print("DungeonGenerator: Generated ", placed_rooms.size(), " rooms with ", cell_count, " cells")
+	if not success and used_room_templates.size() >= room_templates.size():
+		push_warning("DungeonGenerator: Target cell count not reached - all room templates exhausted")
 	return success
 
 

@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://bndcn0x3okf0q"]
+
+[ext_resource type="Script" path="res://advanced_example.gd" id="1_a8kv1"]
+[ext_resource type="Script" path="res://dungeon_generator.gd" id="2_8fxn2"]
+
+[node name="AdvancedExample" type="Node"]
+script = ExtResource("1_a8kv1")
+
+[node name="DungeonGenerator" type="Node" parent="."]
+script = ExtResource("2_8fxn2")

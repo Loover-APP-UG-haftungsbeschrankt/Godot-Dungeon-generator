@@ -30,12 +30,12 @@ func _ready() -> void:
 	generator.generation_step.connect(_on_generation_step)
 	
 	# Generate dungeon on start
-	call_deferred("_generate_and_visualize")
+	_generate_and_visualize()
 
 
 func _generate_and_visualize() -> void:
 	print("\n=== Generating Dungeon ===")
-	var success = generator.generate()
+	var success = await generator.generate()
 	if success:
 		print("Generation successful! Rooms placed: ", generator.placed_rooms.size())
 		queue_redraw()

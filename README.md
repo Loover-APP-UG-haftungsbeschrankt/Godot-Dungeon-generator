@@ -246,24 +246,21 @@ See `CAMERA_CONTROLS.md` for detailed camera documentation.
    - Select **New Resource...**
    - Choose **MetaRoom**
    - Save with a descriptive name
-3. The visual editor will appear in the Inspector with two modes:
-
-   **Inspect Mode (Default)**:
-   - Click any cell to view/edit its properties
-   - Properties panel appears showing:
-     - Cell status (BLOCKED/FLOOR/DOOR)
-     - Connection checkboxes for all 4 directions
-     - Required checkboxes to mark connections as mandatory
-   - Make changes and they apply immediately
-   - Visual feedback: required connections shown with thick arrows (⬆⮕⬇⬅)
+3. The visual editor will appear in the Inspector:
    
-   **Paint Mode**:
-   - Click the mode toggle button to switch modes
-   - Select a cell type brush (BLOCKED, FLOOR, DOOR)
-   - Click cells to paint them with the selected type
-   - Select a connection brush (UP, RIGHT, BOTTOM, LEFT)
-   - Click cells to toggle connections
-   - Use "Clear All Connections" to remove all connections
+   **Simplified Inspect-Only Interface**:
+   - **Click any cell** to view and edit all its properties
+   - Properties panel appears showing:
+     - **Cell Status**: Dropdown to select BLOCKED/FLOOR/DOOR
+     - **Connections**: Checkboxes for all 4 directions (UP/RIGHT/BOTTOM/LEFT)
+     - **Required Flags**: Mark each connection as mandatory with additional checkboxes
+   - Changes apply immediately to the cell
+   - **Visual Feedback**: 
+     - Regular connections shown with thin arrows (↑→↓←)
+     - Required connections shown with thick arrows (⬆⮕⬇⬅)
+     - Cell types color-coded (dark=BLOCKED, light=FLOOR, blue=DOOR)
+   - **Grid Label**: "Room Grid (Click to view/edit cell properties)"
+   - No mode switching needed - every click opens the properties panel
 
 4. **Set Room-Level Required Connections**: 
    - Use the Inspector's `required_connections` property
@@ -274,7 +271,7 @@ See `CAMERA_CONTROLS.md` for detailed camera documentation.
 
 5. Save and use your new room!
 
-See `addons/meta_room_editor/README.md` and `TESTING_REPORT.md` for detailed editor documentation.
+See `addons/meta_room_editor/README.md` for detailed editor documentation, or see `TESTING_COMPLETE.md` for the simplified editor verification report and UI mockup.
 
 **Option 2: Manual Creation**
 

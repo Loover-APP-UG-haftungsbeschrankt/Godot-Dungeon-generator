@@ -51,9 +51,11 @@ S - Generate with new random seed
 Visualization Controls:
 W - Toggle walker visualization
 P - Toggle path visualization
+N - Toggle step numbers
 V - Toggle step-by-step mode
 C - Increase compactness bias (+0.1)
 X - Decrease compactness bias (-0.1)
+0-9 - Toggle individual walker paths
 
 Camera Controls:
 Mouse Wheel - Zoom in/out

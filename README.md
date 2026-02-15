@@ -214,19 +214,33 @@ This algorithm creates dungeons with:
 - **R** - Regenerate dungeon with the same seed
 - **S** - Generate with a new random seed
 
-### Visualization Controls (NEW!)
+### Visualization Controls (Enhanced!)
 
 - **W** - Toggle walker visualization on/off
 - **P** - Toggle path visualization on/off
+- **N** - Toggle step numbers on walker paths on/off
 - **V** - Toggle step-by-step generation mode
 - **C** - Increase compactness bias (+0.1)
 - **X** - Decrease compactness bias (-0.1)
+- **0-9** - Toggle visibility of individual walker paths (press walker ID number)
 
 #### Walker Visualization Features
 
 The visualizer now shows:
 - **Colored Walker Markers**: Each walker has a unique color and displays its ID
-- **Path Trails**: See the complete history of where each walker has been
+  - Walkers are positioned at the **center of rooms** for better visualization
+  - Larger size and thicker outline for improved visibility
+- **Enhanced Path Trails**: See the complete history of where each walker has been
+  - **Wider path lines** (4px default, configurable via `path_line_width`)
+  - Path lines connect room centers, not corners
+  - **Dotted lines for teleports**: When a walker jumps to a distant room
+  - Gradient fade effect on older path segments
+- **Step Numbers**: Optional numbered markers along paths (every 5 steps by default)
+  - Shows the progression of walker movement
+  - Configurable interval via `step_number_interval`
+- **Selective Path Visibility**: Toggle individual walker paths on/off using number keys
+  - Press `0` to toggle walker 0's path, `1` for walker 1, etc.
+  - Helps focus on specific walker behaviors
 - **Live Statistics**: Active walker count, compactness bias, and more
 - **Step-by-Step Mode**: Watch the generation algorithm work in real-time
 
@@ -406,8 +420,11 @@ X X X
 - `cell_size`: Size of each cell in pixels (default: 32)
 - `draw_grid`: Show grid lines (default: true)
 - `draw_connections`: Show connection indicators (default: true)
-- **`draw_walkers`**: Show active walker markers (default: true) **(NEW!)**
-- **`draw_walker_paths`**: Show walker path trails (default: true) **(NEW!)**
+- **`draw_walkers`**: Show active walker markers (default: true)
+- **`draw_walker_paths`**: Show walker path trails (default: true)
+- **`path_line_width`**: Width of walker path lines in pixels (default: 4.0) **(NEW!)**
+- **`draw_step_numbers`**: Show numbered markers along paths (default: true) **(NEW!)**
+- **`step_number_interval`**: Show step numbers every N steps (default: 5) **(NEW!)**
 
 ## Technical Details
 

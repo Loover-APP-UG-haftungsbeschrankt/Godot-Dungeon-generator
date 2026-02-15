@@ -247,7 +247,13 @@ The visualizer now shows:
   - **"Toggle All" button**: Quickly enable/disable all walker paths at once **(NEW!)**
   - **Works during generation**: UI updates when walkers spawn/respawn **(NEW!)**
   - Syncs with keyboard shortcuts (0-9 keys)
-  - Located in bottom-left corner
+  - Located in top-right corner
+- **Mouse Position Display**: Real-time grid coordinates under mouse cursor **(NEW!)**
+  - Shows meta cell position: "Cell: (x, y)"
+  - Located in bottom-right corner
+  - Updates continuously as mouse moves
+  - Accounts for camera zoom and pan
+  - Useful for debugging and navigation
 - **Selective Path Visibility**: Toggle individual walker paths on/off using number keys or UI
   - Press `0` to toggle walker 0's path, `1` for walker 1, etc.
   - Click checkboxes in the Walker Path Visibility panel

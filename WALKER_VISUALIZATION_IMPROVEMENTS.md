@@ -30,7 +30,7 @@ The walker visualization system has been significantly improved to provide bette
 
 ### 4. Step Number Markers
 - **Feature**: Numbered markers along walker paths
-- **Default**: Shows every 5 steps (configurable via `step_number_interval`)
+- **Display**: Shows at every room the walker visits
 - **Toggle**: Press `N` to turn on/off
 - **Visual**: Small circle with step number in walker's color
 - **Use Case**: Track walker progression and identify movement patterns
@@ -50,7 +50,11 @@ The walker visualization system has been significantly improved to provide bette
 ```gdscript
 @export var path_line_width: float = 4.0
 @export var draw_step_numbers: bool = true
-@export var step_number_interval: int = 5
+@export var draw_return_indicators: bool = true
+@export var teleport_distance_threshold: int = 10
+@export var teleport_dash_length: float = 10.0
+@export var teleport_gap_length: float = 10.0
+@export var step_marker_radius: float = 14.0
 ```
 
 ### New Helper Functions
@@ -131,7 +135,7 @@ step_number_interval = 1  # Show every step
 
 - **Path Drawing**: O(n) where n = number of path segments
 - **Teleport Detection**: O(1) per segment (simple distance check)
-- **Room Lookup**: O(m) where m = number of placed rooms
+- **Room Lookup**: O(1) cached dictionary lookups (optimized!)
 - **Overall Impact**: Minimal - visualization runs at 60+ FPS for typical dungeons
 
 ## Future Enhancements (Potential)

@@ -307,7 +307,7 @@ func _draw_step_number(pos: Vector2, step: int, color: Color, is_return: bool = 
 	
 	# Calculate centered position
 	# Use font ascent and descent for proper vertical centering
-	var text_pos = pos - Vector2(text_size.x * 0.5, -font_size * 0.35)
+	var text_pos = pos - Vector2(text_size.x * 0.5, -font_size * TEXT_VERTICAL_OFFSET_FACTOR)
 	
 	draw_string(font, text_pos, text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, color)
 

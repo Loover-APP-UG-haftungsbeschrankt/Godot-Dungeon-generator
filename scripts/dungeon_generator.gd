@@ -176,7 +176,6 @@ func generate() -> bool:
 	
 	# Main generation loop - continue until target cell count is reached
 	var iterations = 0
-	var failed_placement_streak = 0  # Track consecutive failed placements
 	
 	while _count_total_cells() < target_meta_cell_count and iterations < max_iterations:
 		iterations += 1
@@ -188,8 +187,6 @@ func generate() -> bool:
 		
 		# Each walker attempts to place one room
 		for walker in active_walkers:
-			if not walker.is_alive:
-				continue
 			
 			var old_pos = walker.current_room.position
 			
@@ -200,43 +197,21 @@ func generate() -> bool:
 				walker.rooms_placed += 1
 				walker.check_death()
 				any_room_placed_this_iteration = true
-				failed_placement_streak = 0  # Reset streak on successful placement
 				
 				# Emit walker moved signal
 				walker_moved.emit(walker, old_pos, walker.current_room.position)
-				
-				# If walker died, spawn a new one
-				if not walker.is_alive:
-					_respawn_walker(walker)
 				
 				# Wait for visualization if enabled
 				if enable_visualization and visualization_step_delay > 0:
 					await get_tree().create_timer(visualization_step_delay).timeout
 			else:
-				# Failed to place room - try teleporting to another room with open connections
-				var teleport_target = _get_random_room_with_open_connections_compact()
-				if teleport_target != null:
-					walker.move_to_room(teleport_target)
-					walker_moved.emit(walker, old_pos, walker.current_room.position)
-				else:
-					# No rooms with open connections - walker dies
-					walker.is_alive = false
-					_respawn_walker(walker)
+				walker.is_alive = false
+				
+			if not walker.is_alive:
+				_respawn_walker(walker)
 			
 			# Check if we've reached target cell count
 			if _count_total_cells() >= target_meta_cell_count:
-				break
-		
-		# Check if all templates are exhausted (no rooms placed for multiple iterations)
-		if not any_room_placed_this_iteration:
-			failed_placement_streak += 1
-			
-			# If we've failed to place rooms for num_walkers consecutive iterations,
-			# all walkers unable to place rooms - terminate early
-			if failed_placement_streak >= num_walkers:
-				print("DungeonGenerator: No valid room placements possible. Stopping generation.")
-				print("  Templates available: ", room_templates.size())
-				print("  Rooms placed: ", placed_rooms.size())
 				break
 	
 	var cell_count = _count_total_cells()
@@ -353,7 +328,7 @@ func _respawn_walker(walker: Walker) -> void:
 	
 	# 50% chance to spawn at current position if it has open connections
 	# 50% chance to spawn at a random other room
-	var should_spawn_at_current_position = randf() < 0.5
+	var should_spawn_at_current_position = randf() < 0.0
 	
 	if should_spawn_at_current_position and not _get_open_connections(walker.current_room).is_empty():
 		# Spawn at current position

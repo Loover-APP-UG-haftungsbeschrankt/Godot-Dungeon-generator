@@ -17,7 +17,6 @@
 script = ExtResource("1")
 room_templates = Array[ExtResource("2_b1d4m")]([ExtResource("5"), ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("7_u7w57"), ExtResource("8_us072")])
 generation_seed = 978639432
-target_meta_cell_count = 150
 
 [node name="DungeonVisualizer" type="Node2D" parent="." unique_id=1074786944]
 script = ExtResource("6")

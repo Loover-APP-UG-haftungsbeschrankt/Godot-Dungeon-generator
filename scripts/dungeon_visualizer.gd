@@ -209,19 +209,23 @@ func _update_walker_selection_ui() -> void:
 	
 	# Add or update checkboxes for each walker
 	for walker in generator.active_walkers:
+		# Initialize visible_walker_paths for new walkers
+		if not visible_walker_paths.has(walker.walker_id):
+			visible_walker_paths[walker.walker_id] = true
+		
 		# If checkbox already exists, just update it
 		if walker_checkboxes.has(walker.walker_id):
 			var checkbox = walker_checkboxes[walker.walker_id]
 			if checkbox != null:
 				# Update checkbox state if needed (but don't trigger signal)
-				if checkbox.button_pressed != visible_walker_paths.get(walker.walker_id, true):
-					checkbox.set_pressed_no_signal(visible_walker_paths.get(walker.walker_id, true))
+				if checkbox.button_pressed != visible_walker_paths[walker.walker_id]:
+					checkbox.set_pressed_no_signal(visible_walker_paths[walker.walker_id])
 			continue
 		
 		# Create new checkbox for new walker
 		var checkbox = CheckBox.new()
 		checkbox.text = "Walker %d" % walker.walker_id
-		checkbox.button_pressed = visible_walker_paths.get(walker.walker_id, true)
+		checkbox.button_pressed = visible_walker_paths[walker.walker_id]
 		
 		# Create a color indicator
 		var indicator = ColorRect.new()

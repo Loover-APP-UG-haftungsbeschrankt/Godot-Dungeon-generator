@@ -205,7 +205,7 @@ This algorithm creates dungeons with:
    - **Mouse Wheel**: Zoom in/out
    - **Middle/Right Mouse**: Pan/drag the view
    - **+/- Keys**: Zoom in/out
-   - **0 Key**: Reset camera
+   - **Home Key**: Reset camera (changed from 0 key to avoid conflict)
    - **Touchpad Pinch** (MacBook): Zoom in/out
    - **Touchpad Two-Finger Pan** (MacBook): Pan/scroll the view
 
@@ -223,6 +223,7 @@ This algorithm creates dungeons with:
 - **C** - Increase compactness bias (+0.1)
 - **X** - Decrease compactness bias (-0.1)
 - **0-9** - Toggle visibility of individual walker paths (press walker ID number)
+- **Home** - Reset camera to center (changed from 0 key)
 
 #### Walker Visualization Features
 
@@ -235,11 +236,18 @@ The visualizer now shows:
   - Path lines connect room centers, not corners
   - **Dotted lines for teleports**: When a walker jumps to a distant room
   - Gradient fade effect on older path segments
-- **Step Numbers**: Optional numbered markers along paths (every 5 steps by default)
+  - **Return detection**: Thinner lines when walker returns to previously visited room
+- **Step Numbers**: Numbered markers at **every room** the walker visits
   - Shows the progression of walker movement
-  - Configurable interval via `step_number_interval`
-- **Selective Path Visibility**: Toggle individual walker paths on/off using number keys
+  - **Return indicators**: Different background color (dark red) when returning to visited room
+  - Improved text centering for better readability
+- **Walker Selection UI**: Graphical panel with checkboxes to toggle individual walker paths
+  - Color-coded indicators for each walker
+  - Syncs with keyboard shortcuts (0-9 keys)
+  - Located in bottom-left corner
+- **Selective Path Visibility**: Toggle individual walker paths on/off using number keys or UI
   - Press `0` to toggle walker 0's path, `1` for walker 1, etc.
+  - Click checkboxes in the Walker Path Visibility panel
   - Helps focus on specific walker behaviors
 - **Live Statistics**: Active walker count, compactness bias, and more
 - **Step-by-Step Mode**: Watch the generation algorithm work in real-time
@@ -422,13 +430,13 @@ X X X
 - `draw_connections`: Show connection indicators (default: true)
 - **`draw_walkers`**: Show active walker markers (default: true)
 - **`draw_walker_paths`**: Show walker path trails (default: true)
-- **`path_line_width`**: Width of walker path lines in pixels (default: 4.0) **(NEW!)**
-- **`draw_step_numbers`**: Show numbered markers along paths (default: true) **(NEW!)**
-- **`step_number_interval`**: Show step numbers every N steps (default: 5) **(NEW!)**
-- **`teleport_distance_threshold`**: Manhattan distance to consider a move as teleport (default: 10) **(NEW!)**
-- **`teleport_dash_length`**: Length of dashes in teleport lines (default: 10.0) **(NEW!)**
-- **`teleport_gap_length`**: Length of gaps in teleport lines (default: 10.0) **(NEW!)**
-- **`step_marker_radius`**: Radius of step number circle markers (default: 12.0) **(NEW!)**
+- **`path_line_width`**: Width of walker path lines in pixels (default: 4.0)
+- **`draw_step_numbers`**: Show numbered markers at every room (default: true) **(UPDATED!)**
+- **`draw_return_indicators`**: Highlight when walker returns to visited room (default: true) **(NEW!)**
+- **`teleport_distance_threshold`**: Manhattan distance to consider a move as teleport (default: 10)
+- **`teleport_dash_length`**: Length of dashes in teleport lines (default: 10.0)
+- **`teleport_gap_length`**: Length of gaps in teleport lines (default: 10.0)
+- **`step_marker_radius`**: Radius of step number circle markers (default: 14.0) **(UPDATED!)**
 
 ## Technical Details
 

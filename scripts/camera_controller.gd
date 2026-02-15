@@ -6,7 +6,7 @@ extends Camera2D
 ## - Mouse Wheel: Zoom in/out
 ## - Middle Mouse Button (or Right Mouse Button): Pan/drag the view
 ## - Plus (+) / Minus (-) keys: Zoom in/out
-## - 0 key: Reset camera to center
+## - Home key: Reset camera to center
 ## - Touchpad Two-Finger Pan: Pan the view
 ## - Touchpad Pinch: Zoom in/out
 
@@ -88,7 +88,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			# Zoom out at screen center
 			_zoom_at_point(get_viewport().get_visible_rect().size / 2, -zoom_speed)
 			get_viewport().set_input_as_handled()
-		elif event.keycode == KEY_0 or event.keycode == KEY_KP_0:
+		elif event.keycode == KEY_HOME:
 			# Reset zoom and position
 			_reset_camera()
 			get_viewport().set_input_as_handled()

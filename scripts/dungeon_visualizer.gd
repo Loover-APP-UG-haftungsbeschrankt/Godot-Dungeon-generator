@@ -11,11 +11,11 @@ extends Node2D
 @export var draw_walker_paths: bool = true
 @export var path_line_width: float = 4.0
 @export var draw_step_numbers: bool = true
-@export var step_number_interval: int = 5  # Show number every N steps
+@export var draw_return_indicators: bool = true  # Show when walker returns to visited room
 @export var teleport_distance_threshold: int = 10  # Manhattan distance to consider a move as teleport
 @export var teleport_dash_length: float = 10.0  # Length of dashes in teleport lines
 @export var teleport_gap_length: float = 10.0  # Length of gaps in teleport lines
-@export var step_marker_radius: float = 12.0  # Radius of step number circle markers
+@export var step_marker_radius: float = 14.0  # Radius of step number circle markers
 
 var generator: DungeonGenerator
 var cached_cell_count: int = 0
@@ -23,10 +23,11 @@ var cached_active_walker_count: int = 0  # Cache active walker count
 var walker_positions: Dictionary = {}  # walker_id -> current position
 var visible_walker_paths: Dictionary = {}  # walker_id -> bool (which paths to show)
 var room_position_cache: Dictionary = {}  # Vector2i -> PlacedRoom (for O(1) lookups)
+var walker_checkboxes: Dictionary = {}  # walker_id -> CheckBox node
 
 # Constants for text positioning
 const TEXT_VERTICAL_OFFSET_FACTOR = 0.35  # Vertical centering factor for text in circles
-const STEP_TEXT_VERTICAL_OFFSET_FACTOR = 0.3  # Vertical centering for step numbers
+const STEP_TEXT_FONT_SIZE = 13  # Font size for step numbers
 
 
 func _ready() -> void:
@@ -55,6 +56,7 @@ func _generate_and_visualize() -> void:
 	if success:
 		print("Generation successful! Rooms placed: ", generator.placed_rooms.size())
 		_initialize_visible_walker_paths()
+		_update_walker_selection_ui()
 		queue_redraw()
 	else:
 		print("Generation failed or incomplete")
@@ -111,6 +113,47 @@ func _build_room_position_cache() -> void:
 		room_position_cache[placement.position] = placement
 
 
+## Update the walker selection UI with checkboxes for each walker
+func _update_walker_selection_ui() -> void:
+	# Find the checkbox container
+	var checkbox_container = get_node_or_null("../CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer/WalkerCheckboxContainer")
+	if checkbox_container == null:
+		return
+	
+	# Clear existing checkboxes
+	for child in checkbox_container.get_children():
+		child.queue_free()
+	walker_checkboxes.clear()
+	
+	# Create a checkbox for each walker
+	for walker in generator.active_walkers:
+		var checkbox = CheckBox.new()
+		checkbox.text = "Walker %d" % walker.walker_id
+		checkbox.button_pressed = visible_walker_paths.get(walker.walker_id, true)
+		
+		# Create a color indicator by setting the checkbox modulate
+		var indicator = ColorRect.new()
+		indicator.custom_minimum_size = Vector2(16, 16)
+		indicator.color = walker.color
+		
+		var hbox = HBoxContainer.new()
+		hbox.add_child(indicator)
+		hbox.add_child(checkbox)
+		
+		checkbox_container.add_child(hbox)
+		walker_checkboxes[walker.walker_id] = checkbox
+		
+		# Connect the toggled signal
+		checkbox.toggled.connect(_on_walker_checkbox_toggled.bind(walker.walker_id))
+
+
+## Handle walker checkbox toggle
+func _on_walker_checkbox_toggled(button_pressed: bool, walker_id: int) -> void:
+	visible_walker_paths[walker_id] = button_pressed
+	queue_redraw()
+	print("Walker %d path: %s" % [walker_id, "ON" if button_pressed else "OFF"])
+
+
 ## Get the center position of a room in grid coordinates (not world/screen coordinates)
 func _get_room_center_grid_pos(room_pos: Vector2i, room: MetaRoom) -> Vector2:
 	# Calculate center based on actual room dimensions
@@ -154,10 +197,17 @@ func _draw_walker_paths(offset: Vector2) -> void:
 		if walker.path_history.size() < 2:
 			continue
 		
+		# Track visited positions for this walker to detect returns
+		var visited_positions: Dictionary = {}  # Vector2i -> first visit index
+		
 		# Draw path as connected lines
 		for i in range(walker.path_history.size() - 1):
 			var from_room_pos = walker.path_history[i]
 			var to_room_pos = walker.path_history[i + 1]
+			
+			# Track visited positions
+			if not visited_positions.has(from_room_pos):
+				visited_positions[from_room_pos] = i
 			
 			# Find the rooms at these positions to get their centers
 			var from_room = _find_room_at_position(from_room_pos)
@@ -181,17 +231,23 @@ func _draw_walker_paths(offset: Vector2) -> void:
 			# Check if this is a teleport (non-adjacent rooms)
 			var is_teleport = _is_teleport_move(from_room_pos, to_room_pos)
 			
+			# Check if walker is returning to a previously visited room
+			var is_return = visited_positions.has(to_room_pos) and visited_positions[to_room_pos] < i
+			
 			if is_teleport:
 				# Draw dotted line for teleports
 				_draw_dashed_line(from_pos, to_pos, path_color, path_line_width * 0.7, teleport_dash_length, teleport_gap_length)
 			else:
 				# Draw solid line for normal moves
-				draw_line(from_pos, to_pos, path_color, path_line_width)
+				var line_width = path_line_width
+				# Make return paths slightly thinner
+				if is_return and draw_return_indicators:
+					line_width *= 0.8
+				draw_line(from_pos, to_pos, path_color, line_width)
 			
-			# Draw step numbers at intervals
-			if draw_step_numbers and i % step_number_interval == 0:
-				var step_pos = from_pos
-				_draw_step_number(step_pos, i, walker.color)
+			# Draw step numbers at every room
+			if draw_step_numbers:
+				_draw_step_number(from_pos, i, walker.color, is_return)
 
 
 ## Check if a move between two positions is a teleport (non-adjacent)
@@ -225,18 +281,35 @@ func _draw_dashed_line(from: Vector2, to: Vector2, color: Color, width: float, d
 
 
 ## Draw a step number at a position
-func _draw_step_number(pos: Vector2, step: int, color: Color) -> void:
+func _draw_step_number(pos: Vector2, step: int, color: Color, is_return: bool = false) -> void:
 	# Draw a small circle background
 	var bg_color = Color.BLACK
-	bg_color.a = 0.7
+	bg_color.a = 0.75
+	
+	# Make return visits more visible with a different background
+	if is_return and draw_return_indicators:
+		bg_color = Color.DARK_RED
+		bg_color.a = 0.85
+	
 	draw_circle(pos, step_marker_radius, bg_color)
 	
-	# Draw the step number
+	# Draw outline for return visits
+	if is_return and draw_return_indicators:
+		draw_arc(pos, step_marker_radius, 0, TAU, 32, color, 2.0)
+	
+	# Draw the step number with better centering
 	var text = str(step)
 	var font = ThemeDB.fallback_font
-	var font_size = 12
+	var font_size = STEP_TEXT_FONT_SIZE
+	
+	# Get text dimensions for proper centering
 	var text_size = font.get_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size)
-	draw_string(font, pos - text_size * 0.5 + Vector2(0, font_size * STEP_TEXT_VERTICAL_OFFSET_FACTOR), text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, color)
+	
+	# Calculate centered position
+	# Use font ascent and descent for proper vertical centering
+	var text_pos = pos - Vector2(text_size.x * 0.5, -font_size * 0.35)
+	
+	draw_string(font, text_pos, text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, color)
 
 
 ## Find a placed room at a given position using cached lookup (O(1))
@@ -384,5 +457,8 @@ func _input(event: InputEvent) -> void:
 			var walker_id = event.keycode - KEY_0
 			if visible_walker_paths.has(walker_id):
 				visible_walker_paths[walker_id] = !visible_walker_paths[walker_id]
+				# Sync with checkbox if it exists
+				if walker_checkboxes.has(walker_id):
+					walker_checkboxes[walker_id].button_pressed = visible_walker_paths[walker_id]
 				queue_redraw()
 				print("Walker %d path: %s" % [walker_id, "ON" if visible_walker_paths[walker_id] else "OFF"])

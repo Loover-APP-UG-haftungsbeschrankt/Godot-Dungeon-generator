@@ -216,10 +216,15 @@ func _update_walker_selection_ui() -> void:
 		# If checkbox already exists, just update it
 		if walker_checkboxes.has(walker.walker_id):
 			var checkbox = walker_checkboxes[walker.walker_id]
-			if checkbox != null:
+			# Check if checkbox is still valid (not freed/queued for deletion)
+			if checkbox != null and is_instance_valid(checkbox):
 				# Update checkbox state if needed (but don't trigger signal)
 				if checkbox.button_pressed != visible_walker_paths[walker.walker_id]:
 					checkbox.set_pressed_no_signal(visible_walker_paths[walker.walker_id])
+			else:
+				# Checkbox was freed, remove from dictionary
+				walker_checkboxes.erase(walker.walker_id)
+				# Continue to create new checkbox below
 			continue
 		
 		# Create new checkbox for new walker
@@ -268,9 +273,11 @@ func _on_toggle_all_pressed() -> void:
 	# Toggle all walker paths
 	for walker_id in visible_walker_paths:
 		visible_walker_paths[walker_id] = new_state
-		# Sync with checkbox if it exists
+		# Sync with checkbox if it exists and is valid
 		if walker_checkboxes.has(walker_id):
-			walker_checkboxes[walker_id].button_pressed = new_state
+			var checkbox = walker_checkboxes[walker_id]
+			if checkbox != null and is_instance_valid(checkbox):
+				checkbox.button_pressed = new_state
 	
 	queue_redraw()
 	print("All walker paths: %s" % ["ON" if new_state else "OFF"])
@@ -587,8 +594,10 @@ func _input(event: InputEvent) -> void:
 			var walker_id = event.keycode - KEY_0
 			if visible_walker_paths.has(walker_id):
 				visible_walker_paths[walker_id] = !visible_walker_paths[walker_id]
-				# Sync with checkbox if it exists
+				# Sync with checkbox if it exists and is valid
 				if walker_checkboxes.has(walker_id):
-					walker_checkboxes[walker_id].button_pressed = visible_walker_paths[walker_id]
+					var checkbox = walker_checkboxes[walker_id]
+					if checkbox != null and is_instance_valid(checkbox):
+						checkbox.button_pressed = visible_walker_paths[walker_id]
 				queue_redraw()
 				print("Walker %d path: %s" % [walker_id, "ON" if visible_walker_paths[walker_id] else "OFF"])

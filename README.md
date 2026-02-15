@@ -55,8 +55,11 @@ A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algori
 ### 1. MetaCell
 Each cell in a room has:
 - **Type**: BLOCKED, FLOOR, or DOOR
-- **Connections**: UP, RIGHT, BOTTOM, LEFT flags
-- Connections indicate where this cell can connect to adjacent rooms
+- **Connections**: UP, RIGHT, BOTTOM, LEFT flags indicating where this cell can connect to adjacent rooms
+- **Required Connection Flags**: Each connection can be marked as required (must be connected during generation)
+  - `connection_up_required`, `connection_right_required`, etc.
+  - Used for enforcing specific connection patterns within individual cells
+  - Visual editor shows required connections with thicker arrows (⬆⮕⬇⬅)
 
 ### 2. MetaRoom
 A room template consisting of:
@@ -244,18 +247,31 @@ See `CAMERA_CONTROLS.md` for detailed camera documentation.
    - Choose **MetaRoom**
    - Save with a descriptive name
 3. The visual editor will appear in the Inspector:
-   - Set room dimensions and click "Resize Room"
-   - Select a cell type (BLOCKED, FLOOR, DOOR)
-   - Click cells to paint them
-   - Select a connection direction (UP, RIGHT, BOTTOM, LEFT)
-   - Click edge cells to toggle connections
-   - **Set Required Connections**: Specify which connections MUST be connected
-     - For a T-room, set required_connections to [UP, LEFT, RIGHT]
-     - For a cross room, set required_connections to [UP, RIGHT, BOTTOM, LEFT]
-     - Leave empty for rooms where any connection is optional
-4. Save and use your new room!
+   
+   **Simplified Inspect-Only Interface**:
+   - **Click any cell** to view and edit all its properties
+   - Properties panel appears showing:
+     - **Cell Status**: Dropdown to select BLOCKED/FLOOR/DOOR
+     - **Connections**: Checkboxes for all 4 directions (UP/RIGHT/BOTTOM/LEFT)
+     - **Required Flags**: Mark each connection as mandatory with additional checkboxes
+   - Changes apply immediately to the cell
+   - **Visual Feedback**: 
+     - Regular connections shown with thin arrows (↑→↓←)
+     - Required connections shown with thick arrows (⬆⮕⬇⬅)
+     - Cell types color-coded (dark=BLOCKED, light=FLOOR, blue=DOOR)
+   - **Grid Label**: "Room Grid (Click to view/edit cell properties)"
+   - No mode switching needed - every click opens the properties panel
 
-See `addons/meta_room_editor/README.md` for detailed editor documentation.
+4. **Set Room-Level Required Connections**: 
+   - Use the Inspector's `required_connections` property
+   - Add directions that MUST be connected for the entire room
+   - For a T-room, set required_connections to [UP, LEFT, RIGHT]
+   - For a cross room, set required_connections to [UP, RIGHT, BOTTOM, LEFT]
+   - Leave empty for rooms where any connection is optional
+
+5. Save and use your new room!
+
+See `addons/meta_room_editor/README.md` for detailed editor documentation, or see `TESTING_COMPLETE.md` for the simplified editor verification report and UI mockup.
 
 **Option 2: Manual Creation**
 

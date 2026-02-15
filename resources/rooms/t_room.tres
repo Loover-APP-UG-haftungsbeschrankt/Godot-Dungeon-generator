@@ -27,6 +27,7 @@ cell_type = 0
 script = ExtResource("2_meta_cell")
 cell_type = 0
 connection_left = true
+connection_left_required = true
 
 [sub_resource type="Resource" id="Resource_sx8dm"]
 script = ExtResource("2_meta_cell")
@@ -41,6 +42,7 @@ script = ExtResource("2_meta_cell")
 script = ExtResource("2_meta_cell")
 cell_type = 0
 connection_right = true
+connection_right_required = true
 
 [sub_resource type="Resource" id="Resource_8lrnb"]
 script = ExtResource("2_meta_cell")
@@ -73,6 +75,7 @@ cell_type = 0
 script = ExtResource("2_meta_cell")
 cell_type = 0
 connection_bottom = true
+connection_bottom_required = true
 
 [sub_resource type="Resource" id="Resource_0b0wn"]
 script = ExtResource("2_meta_cell")

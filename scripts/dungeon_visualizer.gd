@@ -84,17 +84,19 @@ func _draw() -> void:
 	var bounds = generator.get_dungeon_bounds()
 	var offset = -Vector2(bounds.position) * cell_size + Vector2(50, 50)
 	
+	# Draw each placed room
+	for placement in generator.placed_rooms:
+		_draw_room(placement, offset)
+		
+	
 	# Draw walker paths first (below rooms)
 	if draw_walker_paths:
 		_draw_walker_paths(offset)
 	
-	# Draw each placed room
-	for placement in generator.placed_rooms:
-		_draw_room(placement, offset)
-	
 	# Draw walkers on top
 	if draw_walkers:
 		_draw_walkers(offset)
+		
 	
 	# Draw statistics
 	_draw_statistics(bounds)

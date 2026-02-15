@@ -16,7 +16,12 @@
 [node name="DungeonGenerator" type="Node" parent="." unique_id=1563054712]
 script = ExtResource("1")
 room_templates = Array[ExtResource("2_b1d4m")]([ExtResource("5"), ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("7_u7w57"), ExtResource("8_us072")])
-generation_seed = 978639432
+generation_seed = 2673167376
+num_walkers = 2
+max_rooms_per_walker = 100
+target_meta_cell_count = 2000
+enable_visualization = true
+compactness_bias = 0.65
 
 [node name="DungeonVisualizer" type="Node2D" parent="." unique_id=1074786944]
 script = ExtResource("6")

@@ -5,6 +5,9 @@ A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algori
 ## Features
 
 - **Multi-Walker Generation**: Multiple independent walkers simultaneously place rooms
+- **Walker Visualization**: See walkers in action with colored markers and path trails
+- **Compactness Control**: Adjustable bias for tighter, less sprawling dungeons
+- **Step-by-Step Mode**: Watch generation happen in slow motion for debugging
 - **Unique Room Placement**: Each room template can only be placed once (no duplicates)
 - **Required Connections**: Rooms can specify connections that MUST be connected (e.g., T-rooms need all 3 connections used)
 - **Smart Walker Spawning**: New walkers spawn at current position or rooms with unsatisfied required connections
@@ -191,8 +194,6 @@ This algorithm creates dungeons with:
 
 ## Usage
 
-## Usage
-
 ### Running the Test Scene
 
 1. Open the project in Godot 4.6
@@ -204,8 +205,29 @@ This algorithm creates dungeons with:
    - **0 Key**: Reset camera
    - **Touchpad Pinch** (MacBook): Zoom in/out
    - **Touchpad Two-Finger Pan** (MacBook): Pan/scroll the view
-4. Press R to regenerate with the same seed
-5. Press S to generate with a new random seed
+
+### Generation Controls
+
+- **R** - Regenerate dungeon with the same seed
+- **S** - Generate with a new random seed
+
+### Visualization Controls (NEW!)
+
+- **W** - Toggle walker visualization on/off
+- **P** - Toggle path visualization on/off
+- **V** - Toggle step-by-step generation mode
+- **C** - Increase compactness bias (+0.1)
+- **X** - Decrease compactness bias (-0.1)
+
+#### Walker Visualization Features
+
+The visualizer now shows:
+- **Colored Walker Markers**: Each walker has a unique color and displays its ID
+- **Path Trails**: See the complete history of where each walker has been
+- **Live Statistics**: Active walker count, compactness bias, and more
+- **Step-by-Step Mode**: Watch the generation algorithm work in real-time
+
+See `WALKER_VISUALIZATION.md` for detailed documentation on the visualization system.
 
 See `CAMERA_CONTROLS.md` for detailed camera documentation.
 
@@ -353,6 +375,9 @@ X X X
 - `target_meta_cell_count`: Target total cell count to generate (default: 500)
 - `max_iterations`: Maximum generation loop iterations for safety (default: 10000)
 - `generation_seed`: Seed for reproducible generation (0 = random)
+- **`compactness_bias`**: Controls how compact dungeons are (0.0 = random, 1.0 = very compact, default: 0.3) **(NEW!)**
+- **`enable_visualization`**: Enable step-by-step visualization mode (default: false) **(NEW!)**
+- **`visualization_step_delay`**: Delay in seconds between steps when visualizing (default: 0.1) **(NEW!)**
 
 ### MetaRoom
 - `width`: Width of the room in cells
@@ -365,6 +390,8 @@ X X X
 - `cell_size`: Size of each cell in pixels (default: 32)
 - `draw_grid`: Show grid lines (default: true)
 - `draw_connections`: Show connection indicators (default: true)
+- **`draw_walkers`**: Show active walker markers (default: true) **(NEW!)**
+- **`draw_walker_paths`**: Show walker path trails (default: true) **(NEW!)**
 
 ## Technical Details
 

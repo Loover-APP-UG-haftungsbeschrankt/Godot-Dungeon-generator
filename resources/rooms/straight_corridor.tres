@@ -3,44 +3,68 @@
 [ext_resource type="Script" uid="uid://8fcsrahvylh8" path="res://scripts/meta_room.gd" id="1_meta_room"]
 [ext_resource type="Script" uid="uid://b8mln4ttmne08" path="res://scripts/meta_cell.gd" id="2_meta_cell"]
 
-[sub_resource type="Resource" id="MetaCell_1"]
+[sub_resource type="Resource" id="Resource_w8o4g"]
 script = ExtResource("2_meta_cell")
 cell_type = 0
 
-[sub_resource type="Resource" id="MetaCell_2"]
+[sub_resource type="Resource" id="Resource_hx2gh"]
 script = ExtResource("2_meta_cell")
 cell_type = 0
 connection_up = true
 
-[sub_resource type="Resource" id="MetaCell_3"]
+[sub_resource type="Resource" id="Resource_17ka3"]
 script = ExtResource("2_meta_cell")
 cell_type = 0
 
-[sub_resource type="Resource" id="MetaCell_4"]
+[sub_resource type="Resource" id="Resource_iksek"]
 script = ExtResource("2_meta_cell")
 cell_type = 0
 
-[sub_resource type="Resource" id="MetaCell_5"]
+[sub_resource type="Resource" id="Resource_7hsie"]
 script = ExtResource("2_meta_cell")
 
-[sub_resource type="Resource" id="MetaCell_6"]
-script = ExtResource("2_meta_cell")
-cell_type = 0
-
-[sub_resource type="Resource" id="MetaCell_7"]
+[sub_resource type="Resource" id="Resource_yt202"]
 script = ExtResource("2_meta_cell")
 cell_type = 0
 
-[sub_resource type="Resource" id="MetaCell_8"]
+[sub_resource type="Resource" id="Resource_bcgob"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_eq2gx"]
+script = ExtResource("2_meta_cell")
+
+[sub_resource type="Resource" id="Resource_b6iqp"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_fjxu3"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_t0vrj"]
+script = ExtResource("2_meta_cell")
+
+[sub_resource type="Resource" id="Resource_bwnvv"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_wry3r"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_wm3p2"]
 script = ExtResource("2_meta_cell")
 cell_type = 0
 connection_bottom = true
 
-[sub_resource type="Resource" id="MetaCell_9"]
+[sub_resource type="Resource" id="Resource_06gs2"]
 script = ExtResource("2_meta_cell")
 cell_type = 0
 
 [resource]
 script = ExtResource("1_meta_room")
-cells = Array[ExtResource("2_meta_cell")]([SubResource("MetaCell_1"), SubResource("MetaCell_2"), SubResource("MetaCell_3"), SubResource("MetaCell_4"), SubResource("MetaCell_5"), SubResource("MetaCell_6"), SubResource("MetaCell_7"), SubResource("MetaCell_8"), SubResource("MetaCell_9")])
+height = 5
+cells = Array[ExtResource("2_meta_cell")]([SubResource("Resource_w8o4g"), SubResource("Resource_hx2gh"), SubResource("Resource_17ka3"), SubResource("Resource_iksek"), SubResource("Resource_7hsie"), SubResource("Resource_yt202"), SubResource("Resource_bcgob"), SubResource("Resource_eq2gx"), SubResource("Resource_b6iqp"), SubResource("Resource_fjxu3"), SubResource("Resource_t0vrj"), SubResource("Resource_bwnvv"), SubResource("Resource_wry3r"), SubResource("Resource_wm3p2"), SubResource("Resource_06gs2")])
 room_name = "Straight Corridor"
+required_connections = null

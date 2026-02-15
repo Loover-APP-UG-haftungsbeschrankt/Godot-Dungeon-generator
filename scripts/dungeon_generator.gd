@@ -30,12 +30,19 @@ class Walker:
 	var rooms_placed: int = 0     ## Number of rooms this walker has placed
 	var is_alive: bool = true     ## Whether this walker is still active
 	var max_rooms: int            ## Maximum rooms this walker can place before dying
+	var walker_id: int            ## Unique identifier for this walker
+	var path_history: Array[Vector2i] = []  ## History of room positions visited
+	var color: Color              ## Visual color for this walker
 	
-	func _init(starting_room: PlacedRoom, p_max_rooms: int):
+	func _init(starting_room: PlacedRoom, p_max_rooms: int, p_walker_id: int = 0):
 		current_room = starting_room
 		max_rooms = p_max_rooms
+		walker_id = p_walker_id
 		rooms_placed = 0
 		is_alive = true
+		path_history.append(starting_room.position)
+		# Assign unique color based on walker ID
+		color = _generate_walker_color(p_walker_id)
 	
 	## Check if walker should die
 	func check_death() -> void:
@@ -45,6 +52,14 @@ class Walker:
 	## Move walker to a new room
 	func move_to_room(room: PlacedRoom) -> void:
 		current_room = room
+		path_history.append(room.position)
+	
+	## Generate a unique color for this walker
+	func _generate_walker_color(id: int) -> Color:
+		const GOLDEN_RATIO = 0.618033988749895  # Golden ratio for nice color distribution
+		var hue = (id * GOLDEN_RATIO)
+		hue = fmod(hue, 1.0)
+		return Color.from_hsv(hue, 0.8, 0.9)
 
 
 ## Available room templates to use for generation
@@ -68,6 +83,15 @@ class Walker:
 ## Maximum iterations for the generation loop (safety limit)
 @export var max_iterations: int = 10000
 
+## Enable step-by-step visualization mode
+@export var enable_visualization: bool = false
+
+## Delay between each room placement step (in seconds) when visualizing
+@export var visualization_step_delay: float = 0.1
+
+## Directional bias for more compact dungeons (0 = no bias, 1 = strong bias towards center)
+@export_range(0.0, 1.0) var compactness_bias: float = 0.3
+
 ## List of all placed rooms in the dungeon
 var placed_rooms: Array[PlacedRoom] = []
 
@@ -81,11 +105,26 @@ var active_walkers: Array[Walker] = []
 ## Key: PlacedRoom, Value: Array of connected MetaCell.Direction values
 var room_connected_directions: Dictionary = {}
 
+## Counter for assigning unique walker IDs
+var next_walker_id: int = 0
+
 
 ## Signal emitted when generation completes
 ## Parameters: success (bool), room_count (int), cell_count (int)
 ## Note: cell_count parameter added in multi-walker version
 signal generation_complete(success: bool, room_count: int, cell_count: int)
+
+## Signal emitted when a room is placed (for visualization)
+## Parameters: placement (PlacedRoom), walker (Walker)
+signal room_placed(placement: PlacedRoom, walker: Walker)
+
+## Signal emitted when a walker moves or spawns (for visualization)
+## Parameters: walker (Walker), from_position (Vector2i), to_position (Vector2i)
+signal walker_moved(walker: Walker, from_pos: Vector2i, to_pos: Vector2i)
+
+## Signal emitted at each generation step (for visualization)
+## Parameters: iteration (int), total_cells (int)
+signal generation_step(iteration: int, total_cells: int)
 
 
 ## Generates the dungeon using multi-walker algorithm
@@ -128,23 +167,28 @@ func generate() -> bool:
 	
 	# Initialize walkers at the first room
 	active_walkers.clear()
+	next_walker_id = 0
 	for i in range(num_walkers):
-		var walker = Walker.new(first_placement, max_rooms_per_walker)
+		var walker = Walker.new(first_placement, max_rooms_per_walker, next_walker_id)
+		next_walker_id += 1
 		active_walkers.append(walker)
+		walker_moved.emit(walker, Vector2i.ZERO, first_placement.position)
 	
 	# Main generation loop - continue until target cell count is reached
 	var iterations = 0
-	var failed_placement_streak = 0  # Track consecutive failed placements
 	
 	while _count_total_cells() < target_meta_cell_count and iterations < max_iterations:
 		iterations += 1
+		
+		# Emit step signal for visualization
+		generation_step.emit(iterations, _count_total_cells())
 		
 		var any_room_placed_this_iteration = false
 		
 		# Each walker attempts to place one room
 		for walker in active_walkers:
-			if not walker.is_alive:
-				continue
+			
+			var old_pos = walker.current_room.position
 			
 			# Try to place a room from this walker's current position
 			var placed = _walker_try_place_room(walker)
@@ -153,35 +197,21 @@ func generate() -> bool:
 				walker.rooms_placed += 1
 				walker.check_death()
 				any_room_placed_this_iteration = true
-				failed_placement_streak = 0  # Reset streak on successful placement
 				
-				# If walker died, spawn a new one
-				if not walker.is_alive:
-					_respawn_walker(walker)
+				# Emit walker moved signal
+				walker_moved.emit(walker, old_pos, walker.current_room.position)
+				
+				# Wait for visualization if enabled
+				if enable_visualization and visualization_step_delay > 0:
+					await get_tree().create_timer(visualization_step_delay).timeout
 			else:
-				# Failed to place room - try teleporting to another room with open connections
-				var teleport_target = _get_random_room_with_open_connections()
-				if teleport_target != null:
-					walker.move_to_room(teleport_target)
-				else:
-					# No rooms with open connections - walker dies
-					walker.is_alive = false
-					_respawn_walker(walker)
+				walker.is_alive = false
+				
+			if not walker.is_alive:
+				_respawn_walker(walker)
 			
 			# Check if we've reached target cell count
 			if _count_total_cells() >= target_meta_cell_count:
-				break
-		
-		# Check if all templates are exhausted (no rooms placed for multiple iterations)
-		if not any_room_placed_this_iteration:
-			failed_placement_streak += 1
-			
-			# If we've failed to place rooms for num_walkers consecutive iterations,
-			# all walkers unable to place rooms - terminate early
-			if failed_placement_streak >= num_walkers:
-				print("DungeonGenerator: No valid room placements possible. Stopping generation.")
-				print("  Templates available: ", room_templates.size())
-				print("  Rooms placed: ", placed_rooms.size())
 				break
 	
 	var cell_count = _count_total_cells()
@@ -247,8 +277,10 @@ func _walker_try_place_room(walker: Walker) -> bool:
 	if available_templates.is_empty():
 		return false
 	
-	# Shuffle connections for randomness
+	# Shuffle connections for randomness, but apply compactness bias
 	open_connections.shuffle()
+	if compactness_bias > 0:
+		open_connections = _sort_connections_by_compactness(walker.current_room, open_connections)
 	
 	# Try to place a room at each open connection
 	for conn_point in open_connections:
@@ -282,6 +314,8 @@ func _walker_try_place_room(walker: Walker) -> bool:
 				if placement != null:
 					_place_room(placement)
 					walker.move_to_room(placement)
+					# Emit signal for visualization
+					room_placed.emit(placement, walker)
 					return true
 	
 	return false
@@ -290,21 +324,26 @@ func _walker_try_place_room(walker: Walker) -> bool:
 ## Respawns a walker at a random room with open connections
 ## Can spawn at current walker's position or at another room
 func _respawn_walker(walker: Walker) -> void:
+	var old_pos = walker.current_room.position
+	
 	# 50% chance to spawn at current position if it has open connections
 	# 50% chance to spawn at a random other room
-	var should_spawn_at_current_position = randf() < 0.5
+	var should_spawn_at_current_position = randf() < 0.0
 	
 	if should_spawn_at_current_position and not _get_open_connections(walker.current_room).is_empty():
 		# Spawn at current position
 		walker.rooms_placed = 0
 		walker.is_alive = true
+		# Path history is kept to show the walker's trail
 	else:
-		# Spawn at a random room with open connections
-		var spawn_target = _get_random_room_with_open_connections()
+		# Spawn at a random room with open connections (prefer compact placement)
+		var spawn_target = _get_random_room_with_open_connections_compact()
 		if spawn_target != null:
 			walker.current_room = spawn_target
 			walker.rooms_placed = 0
 			walker.is_alive = true
+			walker.path_history.append(spawn_target.position)
+			walker_moved.emit(walker, old_pos, spawn_target.position)
 
 
 ## Gets all open connections from a placed room
@@ -576,6 +615,7 @@ func clear_dungeon() -> void:
 	occupied_cells.clear()
 	active_walkers.clear()
 	room_connected_directions.clear()
+	next_walker_id = 0
 
 
 ## Gets the bounds of the generated dungeon
@@ -599,3 +639,89 @@ func get_dungeon_bounds() -> Rect2i:
 				max_pos.y = maxi(max_pos.y, world_pos.y)
 	
 	return Rect2i(min_pos, max_pos - min_pos + Vector2i.ONE)
+
+
+## Gets the center of mass of the dungeon (for compactness)
+func _get_dungeon_center() -> Vector2:
+	if placed_rooms.is_empty():
+		return Vector2.ZERO
+	
+	var sum_pos = Vector2.ZERO
+	var count = 0
+	
+	for placement in placed_rooms:
+		sum_pos += Vector2(placement.position)
+		count += 1
+	
+	return sum_pos / count if count > 0 else Vector2.ZERO
+
+
+## Sort connections by distance to dungeon center (for compactness)
+## Closer to center = higher priority when compactness_bias is high
+func _sort_connections_by_compactness(from_room: PlacedRoom, connections: Array[MetaRoom.ConnectionPoint]) -> Array[MetaRoom.ConnectionPoint]:
+	var center = _get_dungeon_center()
+	var scored_connections: Array = []
+	
+	for conn in connections:
+		var conn_world_pos = from_room.get_cell_world_pos(conn.x, conn.y)
+		var adjacent_pos = conn_world_pos + _get_direction_offset(conn.direction)
+		var dist_to_center = Vector2(adjacent_pos).distance_to(center)
+		
+		# Apply bias: lower score = higher priority
+		var score = dist_to_center
+		if randf() > compactness_bias:
+			# Sometimes ignore compactness for variety
+			score = randf() * 1000.0
+		
+		scored_connections.append({"connection": conn, "score": score})
+	
+	# Sort by score (ascending = closer to center first)
+	scored_connections.sort_custom(func(a, b): return a.score < b.score)
+	
+	# Extract sorted connections
+	var sorted: Array[MetaRoom.ConnectionPoint] = []
+	for item in scored_connections:
+		sorted.append(item.connection)
+	
+	return sorted
+
+
+## Gets a random room with open connections, preferring rooms closer to the dungeon center
+## This improves compactness by reducing long teleports
+func _get_random_room_with_open_connections_compact() -> PlacedRoom:
+	var rooms_with_unsatisfied: Array[PlacedRoom] = []
+	var rooms_with_open: Array[PlacedRoom] = []
+	
+	for placement in placed_rooms:
+		var open_connections = _get_open_connections(placement)
+		if not open_connections.is_empty():
+			rooms_with_open.append(placement)
+			
+			# Check if this room has unsatisfied required connections
+			if not _are_required_connections_satisfied(placement):
+				rooms_with_unsatisfied.append(placement)
+	
+	# Prefer rooms with unsatisfied required connections (70% chance)
+	if not rooms_with_unsatisfied.is_empty() and randf() < 0.7:
+		return rooms_with_unsatisfied[randi() % rooms_with_unsatisfied.size()]
+	
+	# Otherwise, pick based on compactness
+	if rooms_with_open.is_empty():
+		return null
+	
+	# Apply compactness bias
+	if compactness_bias > 0 and randf() < compactness_bias:
+		var center = _get_dungeon_center()
+		var closest_room: PlacedRoom = null
+		var closest_dist = INF
+		
+		for room in rooms_with_open:
+			var dist = Vector2(room.position).distance_to(center)
+			if dist < closest_dist:
+				closest_dist = dist
+				closest_room = room
+		
+		return closest_room
+	
+	# Random selection
+	return rooms_with_open[randi() % rooms_with_open.size()]

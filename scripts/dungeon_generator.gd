@@ -748,6 +748,12 @@ func _can_satisfy_required_connections(placement: PlacedRoom) -> bool:
 	if placement.room.required_connections.is_empty():
 		return true
 	
+	# Get room templates without required connections once
+	var rooms_without_required = _get_room_templates_without_required_connections()
+	if rooms_without_required.is_empty():
+		# No rooms available to place at required connections
+		return false
+	
 	# Get all connection points in the room
 	var all_connections = placement.room.get_connection_points()
 	
@@ -775,7 +781,6 @@ func _can_satisfy_required_connections(placement: PlacedRoom) -> bool:
 				
 				# Check if we can place any room without required connections here
 				var can_place_any_room = false
-				var rooms_without_required = _get_room_templates_without_required_connections()
 				
 				for template in rooms_without_required:
 					# Try all rotations
@@ -838,8 +843,7 @@ func _place_required_connection_rooms(placement: PlacedRoom, original_walker: Wa
 			if occupied_cells.has(adjacent_pos):
 				# Already connected - mark as satisfied
 				print("    Direction ", required_dir, " already connected")
-				if not room_connected_directions[placement].has(required_dir):
-					room_connected_directions[placement].append(required_dir)
+				_mark_connection_satisfied(placement, required_dir)
 				continue
 			
 			# Try to place a room without required connections
@@ -862,8 +866,7 @@ func _place_required_connection_rooms(placement: PlacedRoom, original_walker: Wa
 						_place_room(new_placement)
 						
 						# Mark this required connection as satisfied
-						if not room_connected_directions[placement].has(required_dir):
-							room_connected_directions[placement].append(required_dir)
+						_mark_connection_satisfied(placement, required_dir)
 						
 						print("    Placed '", rotated_room.room_name, "' at direction ", required_dir)
 						
@@ -900,3 +903,13 @@ func _get_room_templates_without_required_connections() -> Array[MetaRoom]:
 			result.append(template)
 	
 	return result
+
+
+## Marks a connection direction as satisfied for a placed room
+## Helper function to avoid duplication
+func _mark_connection_satisfied(placement: PlacedRoom, direction: MetaCell.Direction) -> void:
+	if not room_connected_directions.has(placement):
+		room_connected_directions[placement] = []
+	
+	if not room_connected_directions[placement].has(direction):
+		room_connected_directions[placement].append(direction)

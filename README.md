@@ -387,6 +387,7 @@ X X X
 - **`compactness_bias`**: Controls how compact dungeons are (0.0 = random, 1.0 = very compact, default: 0.3) **(NEW!)**
 - **`enable_visualization`**: Enable step-by-step visualization mode (default: false) **(NEW!)**
 - **`visualization_step_delay`**: Delay in seconds between steps when visualizing (default: 0.1) **(NEW!)**
+- **`debug_required_connections`**: Enable debug logging for required connections feature (default: false) **(NEW!)**
 
 ### MetaRoom
 - `width`: Width of the room in cells

@@ -92,6 +92,9 @@ class Walker:
 ## Directional bias for more compact dungeons (0 = no bias, 1 = strong bias towards center)
 @export_range(0.0, 1.0) var compactness_bias: float = 0.3
 
+## Enable debug logging for required connections
+@export var debug_required_connections: bool = false
+
 ## List of all placed rooms in the dungeon
 var placed_rooms: Array[PlacedRoom] = []
 
@@ -316,9 +319,11 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					if not rotated_room.required_connections.is_empty():
 						if not _can_satisfy_required_connections(placement):
 							# Cannot satisfy required connections, skip this placement
-							print("Skipping room '", rotated_room.room_name, "' - cannot satisfy required connections")
+							if debug_required_connections:
+								print("Skipping room '", rotated_room.room_name, "' - cannot satisfy required connections")
 							continue
-						print("Placing room '", rotated_room.room_name, "' with ", rotated_room.required_connections.size(), " required connections")
+						if debug_required_connections:
+							print("Placing room '", rotated_room.room_name, "' with ", rotated_room.required_connections.size(), " required connections")
 					
 					# Place the room
 					_place_room(placement)
@@ -821,7 +826,8 @@ func _place_required_connection_rooms(placement: PlacedRoom, original_walker: Wa
 		push_warning("No room templates without required connections available")
 		return
 	
-	print("  Placing required connection rooms for '", placement.room.room_name, "' (", available_templates.size(), " templates available)")
+	if debug_required_connections:
+		print("  Placing required connection rooms for '", placement.room.room_name, "' (", available_templates.size(), " templates available)")
 	
 	# Get all connection points in the room
 	var all_connections = placement.room.get_connection_points()
@@ -842,7 +848,8 @@ func _place_required_connection_rooms(placement: PlacedRoom, original_walker: Wa
 			# Check if there's already a room at the adjacent position
 			if occupied_cells.has(adjacent_pos):
 				# Already connected - mark as satisfied
-				print("    Direction ", required_dir, " already connected")
+				if debug_required_connections:
+					print("    Direction ", required_dir, " already connected")
 				_mark_connection_satisfied(placement, required_dir)
 				continue
 			
@@ -868,7 +875,8 @@ func _place_required_connection_rooms(placement: PlacedRoom, original_walker: Wa
 						# Mark this required connection as satisfied
 						_mark_connection_satisfied(placement, required_dir)
 						
-						print("    Placed '", rotated_room.room_name, "' at direction ", required_dir)
+						if debug_required_connections:
+							print("    Placed '", rotated_room.room_name, "' at direction ", required_dir)
 						
 						# Emit signal for visualization
 						room_placed.emit(new_placement, original_walker)
@@ -878,7 +886,8 @@ func _place_required_connection_rooms(placement: PlacedRoom, original_walker: Wa
 						next_walker_id += 1
 						active_walkers.append(new_walker)
 						walker_moved.emit(new_walker, placement.position, new_placement.position)
-						print("    Spawned new walker #", new_walker.walker_id, " at required connection")
+						if debug_required_connections:
+							print("    Spawned new walker #", new_walker.walker_id, " at required connection")
 						
 						placed_successfully = true
 						break

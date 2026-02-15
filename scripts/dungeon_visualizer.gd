@@ -22,6 +22,11 @@ var cached_cell_count: int = 0
 var cached_active_walker_count: int = 0  # Cache active walker count
 var walker_positions: Dictionary = {}  # walker_id -> current position
 var visible_walker_paths: Dictionary = {}  # walker_id -> bool (which paths to show)
+var room_position_cache: Dictionary = {}  # Vector2i -> PlacedRoom (for O(1) lookups)
+
+# Constants for text positioning
+const TEXT_VERTICAL_OFFSET_FACTOR = 0.35  # Vertical centering factor for text in circles
+const STEP_TEXT_VERTICAL_OFFSET_FACTOR = 0.3  # Vertical centering for step numbers
 
 
 func _ready() -> void:
@@ -59,6 +64,7 @@ func _on_generation_complete(success: bool, room_count: int, cell_count: int) ->
 	print("Dungeon generation complete. Success: ", success, ", Rooms: ", room_count, ", Cells: ", cell_count)
 	cached_cell_count = cell_count
 	_update_walker_count()
+	_build_room_position_cache()
 	queue_redraw()
 
 
@@ -96,8 +102,17 @@ func _initialize_visible_walker_paths() -> void:
 		visible_walker_paths[walker.walker_id] = true
 
 
-## Get the center position of a room in world coordinates
-func _get_room_center_pos(room_pos: Vector2i, room: MetaRoom) -> Vector2:
+## Build cache of room positions for O(1) lookups
+func _build_room_position_cache() -> void:
+	room_position_cache.clear()
+	if generator == null:
+		return
+	for placement in generator.placed_rooms:
+		room_position_cache[placement.position] = placement
+
+
+## Get the center position of a room in grid coordinates (not world/screen coordinates)
+func _get_room_center_grid_pos(room_pos: Vector2i, room: MetaRoom) -> Vector2:
 	# Calculate center based on actual room dimensions
 	var center_offset = Vector2(room.width, room.height) * 0.5
 	return Vector2(room_pos) + center_offset
@@ -152,8 +167,8 @@ func _draw_walker_paths(offset: Vector2) -> void:
 				continue
 			
 			# Calculate center positions in screen space
-			var from_center = _get_room_center_pos(from_room_pos, from_room.room)
-			var to_center = _get_room_center_pos(to_room_pos, to_room.room)
+			var from_center = _get_room_center_grid_pos(from_room_pos, from_room.room)
+			var to_center = _get_room_center_grid_pos(to_room_pos, to_room.room)
 			
 			var from_pos = from_center * cell_size + offset
 			var to_pos = to_center * cell_size + offset
@@ -183,8 +198,8 @@ func _draw_walker_paths(offset: Vector2) -> void:
 func _is_teleport_move(from_pos: Vector2i, to_pos: Vector2i) -> bool:
 	var delta = to_pos - from_pos
 	var manhattan_dist = abs(delta.x) + abs(delta.y)
-	# Adjacent rooms have manhattan distance <= max room dimension
-	# Use configurable threshold to determine if it's a teleport
+	# Use configurable threshold as a heuristic to distinguish teleports from adjacent moves
+	# This works well for typical room sizes, but may need adjustment for very large rooms
 	return manhattan_dist > teleport_distance_threshold
 
 
@@ -221,15 +236,12 @@ func _draw_step_number(pos: Vector2, step: int, color: Color) -> void:
 	var font = ThemeDB.fallback_font
 	var font_size = 12
 	var text_size = font.get_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size)
-	draw_string(font, pos - text_size * 0.5 + Vector2(0, font_size * 0.3), text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, color)
+	draw_string(font, pos - text_size * 0.5 + Vector2(0, font_size * STEP_TEXT_VERTICAL_OFFSET_FACTOR), text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, color)
 
 
-## Find a placed room at a given position
+## Find a placed room at a given position using cached lookup (O(1))
 func _find_room_at_position(pos: Vector2i) -> DungeonGenerator.PlacedRoom:
-	for placement in generator.placed_rooms:
-		if placement.position == pos:
-			return placement
-	return null
+	return room_position_cache.get(pos, null)
 
 
 func _draw_walkers(offset: Vector2) -> void:
@@ -243,7 +255,7 @@ func _draw_walkers(offset: Vector2) -> void:
 			continue
 		
 		# Calculate walker position at center of room
-		var room_center = _get_room_center_pos(walker.current_room.position, room.room)
+		var room_center = _get_room_center_grid_pos(walker.current_room.position, room.room)
 		var walker_pos = room_center * cell_size + offset
 		
 		# Draw walker as a colored circle
@@ -257,7 +269,7 @@ func _draw_walkers(offset: Vector2) -> void:
 		var font = ThemeDB.fallback_font
 		var font_size = 18
 		var text_size = font.get_string_size(id_text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size)
-		draw_string(font, walker_pos - text_size * 0.5 + Vector2(0, font_size * 0.35), id_text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, Color.BLACK)
+		draw_string(font, walker_pos - text_size * 0.5 + Vector2(0, font_size * TEXT_VERTICAL_OFFSET_FACTOR), id_text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, Color.BLACK)
 
 
 func _draw_room(placement: DungeonGenerator.PlacedRoom, offset: Vector2) -> void:

@@ -119,8 +119,8 @@ signal generation_complete(success: bool, room_count: int, cell_count: int)
 signal room_placed(placement: PlacedRoom, walker: Walker)
 
 ## Signal emitted when a walker moves or spawns (for visualization)
-## Parameters: walker (Walker), from_position (Vector2i), to_position (Vector2i)
-signal walker_moved(walker: Walker, from_pos: Vector2i, to_pos: Vector2i)
+## Parameters: walker (Walker), from_position (Vector2i), to_position (Vector2i), is_teleport (bool)
+signal walker_moved(walker: Walker, from_pos: Vector2i, to_pos: Vector2i, is_teleport: bool)
 
 ## Signal emitted at each generation step (for visualization)
 ## Parameters: iteration (int), total_cells (int)
@@ -172,7 +172,7 @@ func generate() -> bool:
 		var walker = Walker.new(first_placement, max_rooms_per_walker, next_walker_id)
 		next_walker_id += 1
 		active_walkers.append(walker)
-		walker_moved.emit(walker, Vector2i.ZERO, first_placement.position)
+		walker_moved.emit(walker, Vector2i.ZERO, first_placement.position, false)
 	
 	# Main generation loop - continue until target cell count is reached
 	var iterations = 0
@@ -198,8 +198,8 @@ func generate() -> bool:
 				walker.check_death()
 				any_room_placed_this_iteration = true
 				
-				# Emit walker moved signal
-				walker_moved.emit(walker, old_pos, walker.current_room.position)
+				# Emit walker moved signal - this is a normal move, not a teleport
+				walker_moved.emit(walker, old_pos, walker.current_room.position, false)
 				
 				# Wait for visualization if enabled
 				if enable_visualization and visualization_step_delay > 0:
@@ -331,10 +331,11 @@ func _respawn_walker(walker: Walker) -> void:
 	var should_spawn_at_current_position = randf() < 0.5
 	
 	if should_spawn_at_current_position and not _get_open_connections(walker.current_room).is_empty():
-		# Spawn at current position
+		# Spawn at current position - not a teleport
 		walker.rooms_placed = 0
 		walker.is_alive = true
 		# Path history is kept to show the walker's trail
+		# No walker_moved signal needed as position didn't change
 	else:
 		# Spawn at a random room with open connections (prefer compact placement)
 		var spawn_target = _get_random_room_with_open_connections_compact()
@@ -343,7 +344,8 @@ func _respawn_walker(walker: Walker) -> void:
 			walker.rooms_placed = 0
 			walker.is_alive = true
 			walker.path_history.append(spawn_target.position)
-			walker_moved.emit(walker, old_pos, spawn_target.position)
+			# This is a teleport - the walker jumped to a non-adjacent room
+			walker_moved.emit(walker, old_pos, spawn_target.position, true)
 
 
 ## Gets all open connections from a placed room

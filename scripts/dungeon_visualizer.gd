@@ -12,7 +12,6 @@ extends Node2D
 @export var path_line_width: float = 4.0
 @export var draw_step_numbers: bool = true
 @export var draw_return_indicators: bool = true  # Show when walker returns to visited room
-@export var teleport_distance_threshold: int = 10  # Manhattan distance to consider a move as teleport
 @export var teleport_dash_length: float = 10.0  # Length of dashes in teleport lines
 @export var teleport_gap_length: float = 10.0  # Length of gaps in teleport lines
 @export var step_marker_radius: float = 14.0  # Radius of step number circle markers
@@ -24,6 +23,7 @@ var walker_positions: Dictionary = {}  # walker_id -> current position
 var visible_walker_paths: Dictionary = {}  # walker_id -> bool (which paths to show)
 var room_position_cache: Dictionary = {}  # Vector2i -> PlacedRoom (for O(1) lookups)
 var walker_checkboxes: Dictionary = {}  # walker_id -> CheckBox node
+var walker_teleports: Dictionary = {}  # walker_id -> Array[bool] (is each segment a teleport)
 var mouse_position_label: Label  # Label for displaying mouse grid position
 var camera: Camera2D  # Reference to the camera for coordinate conversion
 
@@ -127,9 +127,15 @@ func _on_room_placed(placement: DungeonGenerator.PlacedRoom, walker: DungeonGene
 	queue_redraw()
 
 
-func _on_walker_moved(walker: DungeonGenerator.Walker, from_pos: Vector2i, to_pos: Vector2i) -> void:
+func _on_walker_moved(walker: DungeonGenerator.Walker, from_pos: Vector2i, to_pos: Vector2i, is_teleport: bool) -> void:
 	# Track walker position for visualization
 	walker_positions[walker.walker_id] = to_pos
+	
+	# Track whether this move was a teleport
+	if not walker_teleports.has(walker.walker_id):
+		walker_teleports[walker.walker_id] = []
+	walker_teleports[walker.walker_id].append(is_teleport)
+	
 	_update_walker_count()
 	# Update UI if needed (e.g., if new walker spawned during generation)
 	_update_walker_selection_ui_if_needed()
@@ -154,10 +160,12 @@ func _update_walker_count() -> void:
 ## Initialize visible walker paths dictionary based on active walkers
 func _initialize_visible_walker_paths() -> void:
 	visible_walker_paths.clear()
+	walker_teleports.clear()
 	if generator == null:
 		return
 	for walker in generator.active_walkers:
 		visible_walker_paths[walker.walker_id] = true
+		walker_teleports[walker.walker_id] = []
 
 
 ## Build cache of room positions for O(1) lookups
@@ -282,6 +290,9 @@ func _draw_walker_paths(offset: Vector2) -> void:
 		if walker.path_history.size() < 2:
 			continue
 		
+		# Get the teleport flags for this walker
+		var teleport_flags = walker_teleports.get(walker.walker_id, [])
+		
 		# Track visited positions for this walker to detect returns
 		var visited_positions: Dictionary = {}  # Vector2i -> first visit index
 		
@@ -313,8 +324,10 @@ func _draw_walker_paths(offset: Vector2) -> void:
 			var path_color = walker.color
 			path_color.a = alpha
 			
-			# Check if this is a teleport (non-adjacent rooms)
-			var is_teleport = _is_teleport_move(from_room_pos, to_room_pos)
+			# Get exact teleport information for this segment
+			var is_teleport = false
+			if i < teleport_flags.size():
+				is_teleport = teleport_flags[i]
 			
 			# Check if walker is returning to a previously visited room
 			var is_return = visited_positions.has(to_room_pos) and visited_positions[to_room_pos] < i
@@ -333,15 +346,6 @@ func _draw_walker_paths(offset: Vector2) -> void:
 			# Draw step numbers at every room
 			if draw_step_numbers:
 				_draw_step_number(from_pos, i, walker.color, is_return)
-
-
-## Check if a move between two positions is a teleport (non-adjacent)
-func _is_teleport_move(from_pos: Vector2i, to_pos: Vector2i) -> bool:
-	var delta = to_pos - from_pos
-	var manhattan_dist = abs(delta.x) + abs(delta.y)
-	# Use configurable threshold as a heuristic to distinguish teleports from adjacent moves
-	# This works well for typical room sizes, but may need adjustment for very large rooms
-	return manhattan_dist > teleport_distance_threshold
 
 
 ## Draw a dashed/dotted line

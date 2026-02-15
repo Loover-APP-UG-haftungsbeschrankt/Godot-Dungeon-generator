@@ -885,7 +885,6 @@ func _place_required_connection_rooms(placement: PlacedRoom, original_walker: Wa
 			
 			if not placed_successfully:
 				push_warning("Could not place required connection room at direction ", required_dir)
-
 			
 			# Only handle the first connection point in this direction
 			break

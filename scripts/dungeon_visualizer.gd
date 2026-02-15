@@ -71,6 +71,8 @@ func _on_generation_complete(success: bool, room_count: int, cell_count: int) ->
 
 
 func _on_room_placed(placement: DungeonGenerator.PlacedRoom, walker: DungeonGenerator.Walker) -> void:
+	# Update room position cache incrementally during generation
+	room_position_cache[placement.position] = placement
 	# Update visualization when a room is placed
 	queue_redraw()
 
@@ -85,6 +87,8 @@ func _on_walker_moved(walker: DungeonGenerator.Walker, from_pos: Vector2i, to_po
 func _on_generation_step(iteration: int, total_cells: int) -> void:
 	# Update cached cell count during generation
 	cached_cell_count = total_cells
+	# Redraw to show walker paths and positions during generation
+	queue_redraw()
 
 
 ## Update the cached active walker count

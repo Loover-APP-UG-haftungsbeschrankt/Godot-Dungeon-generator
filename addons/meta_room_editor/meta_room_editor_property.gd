@@ -407,4 +407,3 @@ func _on_required_connection_toggled(is_checked: bool, direction: int) -> void:
 	
 	# Notify that the resource changed
 	meta_room.emit_changed()
-	print("Required connections updated: ", meta_room.required_connections)

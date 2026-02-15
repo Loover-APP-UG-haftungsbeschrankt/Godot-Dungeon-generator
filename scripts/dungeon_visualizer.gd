@@ -105,7 +105,9 @@ func _generate_and_visualize() -> void:
 	var success = await generator.generate()
 	if success:
 		print("Generation successful! Rooms placed: ", generator.placed_rooms.size())
-		_initialize_visible_walker_paths()
+		# Don't call _initialize_visible_walker_paths() here - it clears walker_teleports!
+		# The function is already called in _ready() to set up empty data structures.
+		# Calling it here would erase all teleport data collected during generation.
 		_update_walker_selection_ui()
 		queue_redraw()
 	else:

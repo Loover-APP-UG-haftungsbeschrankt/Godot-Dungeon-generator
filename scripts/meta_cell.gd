@@ -35,6 +35,18 @@ enum CellType {
 ## Whether this cell has a connection to the left
 @export var connection_left: bool = false
 
+## Whether the up connection is required (must be connected)
+@export var connection_up_required: bool = false
+
+## Whether the right connection is required (must be connected)
+@export var connection_right_required: bool = false
+
+## Whether the bottom connection is required (must be connected)
+@export var connection_bottom_required: bool = false
+
+## Whether the left connection is required (must be connected)
+@export var connection_left_required: bool = false
+
 
 ## Returns true if this cell has any connections
 func has_any_connection() -> bool:
@@ -68,6 +80,33 @@ func set_connection(direction: Direction, value: bool) -> void:
 			connection_left = value
 
 
+## Returns true if a connection in the specified direction is required
+func is_connection_required(direction: Direction) -> bool:
+	match direction:
+		Direction.UP:
+			return connection_up_required
+		Direction.RIGHT:
+			return connection_right_required
+		Direction.BOTTOM:
+			return connection_bottom_required
+		Direction.LEFT:
+			return connection_left_required
+	return false
+
+
+## Sets the required state for a connection in a specific direction
+func set_connection_required(direction: Direction, value: bool) -> void:
+	match direction:
+		Direction.UP:
+			connection_up_required = value
+		Direction.RIGHT:
+			connection_right_required = value
+		Direction.BOTTOM:
+			connection_bottom_required = value
+		Direction.LEFT:
+			connection_left_required = value
+
+
 ## Returns the opposite direction
 static func opposite_direction(direction: Direction) -> Direction:
 	match direction:
@@ -90,4 +129,8 @@ func clone() -> MetaCell:
 	new_cell.connection_right = connection_right
 	new_cell.connection_bottom = connection_bottom
 	new_cell.connection_left = connection_left
+	new_cell.connection_up_required = connection_up_required
+	new_cell.connection_right_required = connection_right_required
+	new_cell.connection_bottom_required = connection_bottom_required
+	new_cell.connection_left_required = connection_left_required
 	return new_cell

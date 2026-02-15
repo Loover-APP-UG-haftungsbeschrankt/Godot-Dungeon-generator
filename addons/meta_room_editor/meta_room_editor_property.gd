@@ -10,6 +10,10 @@ var cell_buttons: Array[Button] = []
 var selected_cell_type: MetaCell.CellType = MetaCell.CellType.FLOOR
 var selected_connection_direction: int = -1  # -1 = none, 0-3 = UP/RIGHT/BOTTOM/LEFT
 
+# Editing mode
+enum EditMode { PAINT, INSPECT }
+var edit_mode: EditMode = EditMode.INSPECT
+
 # UI Elements
 var info_label: Label
 var width_spinbox: SpinBox
@@ -17,6 +21,24 @@ var height_spinbox: SpinBox
 var resize_button: Button
 var cell_type_buttons: Dictionary = {}
 var connection_buttons: Dictionary = {}
+var mode_toggle_button: Button
+
+# Cell properties panel
+var properties_panel: PanelContainer
+var properties_visible: bool = false
+var current_selected_cell_x: int = -1
+var current_selected_cell_y: int = -1
+
+# Property controls
+var prop_cell_type_option: OptionButton
+var prop_conn_up_check: CheckBox
+var prop_conn_right_check: CheckBox
+var prop_conn_bottom_check: CheckBox
+var prop_conn_left_check: CheckBox
+var prop_conn_up_req_check: CheckBox
+var prop_conn_right_req_check: CheckBox
+var prop_conn_bottom_req_check: CheckBox
+var prop_conn_left_req_check: CheckBox
 
 var _initialized: bool = false
 
@@ -167,9 +189,25 @@ func _setup_ui() -> void:
 	var sep3 = HSeparator.new()
 	add_child(sep3)
 	
+	# Edit mode selector
+	var mode_label = Label.new()
+	mode_label.text = "Edit Mode"
+	mode_label.add_theme_font_size_override("font_size", 14)
+	add_child(mode_label)
+	
+	mode_toggle_button = Button.new()
+	mode_toggle_button.text = "Mode: Inspect Cell (Click to view/edit properties)"
+	mode_toggle_button.toggle_mode = false
+	mode_toggle_button.pressed.connect(_on_mode_toggle)
+	add_child(mode_toggle_button)
+	
+	# Separator
+	var sep4 = HSeparator.new()
+	add_child(sep4)
+	
 	# Grid label
 	var grid_label = Label.new()
-	grid_label.text = "Room Grid (Click to paint cells)"
+	grid_label.text = "Room Grid"
 	grid_label.add_theme_font_size_override("font_size", 14)
 	add_child(grid_label)
 	
@@ -181,7 +219,220 @@ func _setup_ui() -> void:
 	grid_container.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	add_child(grid_container)
 	print("MetaRoom Editor: Grid container created and added")
+	
+	# Cell properties panel
+	_setup_properties_panel()
+	
 	print("MetaRoom Editor: _setup_ui() completed")
+
+
+func _setup_properties_panel() -> void:
+	# Separator
+	var sep = HSeparator.new()
+	add_child(sep)
+	
+	properties_panel = PanelContainer.new()
+	properties_panel.visible = false
+	add_child(properties_panel)
+	
+	var prop_vbox = VBoxContainer.new()
+	properties_panel.add_child(prop_vbox)
+	
+	# Title
+	var title_label = Label.new()
+	title_label.text = "Cell Properties"
+	title_label.add_theme_font_size_override("font_size", 16)
+	prop_vbox.add_child(title_label)
+	
+	var sep2 = HSeparator.new()
+	prop_vbox.add_child(sep2)
+	
+	# Cell type selector
+	var type_hbox = HBoxContainer.new()
+	var type_label = Label.new()
+	type_label.text = "Status:"
+	type_label.custom_minimum_size.x = 100
+	type_hbox.add_child(type_label)
+	
+	prop_cell_type_option = OptionButton.new()
+	prop_cell_type_option.add_item("BLOCKED", MetaCell.CellType.BLOCKED)
+	prop_cell_type_option.add_item("FLOOR", MetaCell.CellType.FLOOR)
+	prop_cell_type_option.add_item("DOOR", MetaCell.CellType.DOOR)
+	prop_cell_type_option.item_selected.connect(_on_prop_cell_type_changed)
+	prop_cell_type_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	type_hbox.add_child(prop_cell_type_option)
+	prop_vbox.add_child(type_hbox)
+	
+	var sep3 = HSeparator.new()
+	prop_vbox.add_child(sep3)
+	
+	# Connections section
+	var conn_label = Label.new()
+	conn_label.text = "Connections"
+	conn_label.add_theme_font_size_override("font_size", 14)
+	prop_vbox.add_child(conn_label)
+	
+	# UP connection
+	var up_container = HBoxContainer.new()
+	prop_conn_up_check = CheckBox.new()
+	prop_conn_up_check.text = "UP"
+	prop_conn_up_check.custom_minimum_size.x = 150
+	prop_conn_up_check.toggled.connect(_on_prop_connection_changed.bind(MetaCell.Direction.UP))
+	up_container.add_child(prop_conn_up_check)
+	
+	prop_conn_up_req_check = CheckBox.new()
+	prop_conn_up_req_check.text = "Required"
+	prop_conn_up_req_check.toggled.connect(_on_prop_connection_required_changed.bind(MetaCell.Direction.UP))
+	up_container.add_child(prop_conn_up_req_check)
+	prop_vbox.add_child(up_container)
+	
+	# RIGHT connection
+	var right_container = HBoxContainer.new()
+	prop_conn_right_check = CheckBox.new()
+	prop_conn_right_check.text = "RIGHT"
+	prop_conn_right_check.custom_minimum_size.x = 150
+	prop_conn_right_check.toggled.connect(_on_prop_connection_changed.bind(MetaCell.Direction.RIGHT))
+	right_container.add_child(prop_conn_right_check)
+	
+	prop_conn_right_req_check = CheckBox.new()
+	prop_conn_right_req_check.text = "Required"
+	prop_conn_right_req_check.toggled.connect(_on_prop_connection_required_changed.bind(MetaCell.Direction.RIGHT))
+	right_container.add_child(prop_conn_right_req_check)
+	prop_vbox.add_child(right_container)
+	
+	# BOTTOM connection
+	var bottom_container = HBoxContainer.new()
+	prop_conn_bottom_check = CheckBox.new()
+	prop_conn_bottom_check.text = "BOTTOM"
+	prop_conn_bottom_check.custom_minimum_size.x = 150
+	prop_conn_bottom_check.toggled.connect(_on_prop_connection_changed.bind(MetaCell.Direction.BOTTOM))
+	bottom_container.add_child(prop_conn_bottom_check)
+	
+	prop_conn_bottom_req_check = CheckBox.new()
+	prop_conn_bottom_req_check.text = "Required"
+	prop_conn_bottom_req_check.toggled.connect(_on_prop_connection_required_changed.bind(MetaCell.Direction.BOTTOM))
+	bottom_container.add_child(prop_conn_bottom_req_check)
+	prop_vbox.add_child(bottom_container)
+	
+	# LEFT connection
+	var left_container = HBoxContainer.new()
+	prop_conn_left_check = CheckBox.new()
+	prop_conn_left_check.text = "LEFT"
+	prop_conn_left_check.custom_minimum_size.x = 150
+	prop_conn_left_check.toggled.connect(_on_prop_connection_changed.bind(MetaCell.Direction.LEFT))
+	left_container.add_child(prop_conn_left_check)
+	
+	prop_conn_left_req_check = CheckBox.new()
+	prop_conn_left_req_check.text = "Required"
+	prop_conn_left_req_check.toggled.connect(_on_prop_connection_required_changed.bind(MetaCell.Direction.LEFT))
+	left_container.add_child(prop_conn_left_req_check)
+	prop_vbox.add_child(left_container)
+	
+	var sep4 = HSeparator.new()
+	prop_vbox.add_child(sep4)
+	
+	# Close button
+	var close_button = Button.new()
+	close_button.text = "Close Properties"
+	close_button.pressed.connect(_on_close_properties)
+	prop_vbox.add_child(close_button)
+
+
+func _on_mode_toggle() -> void:
+	if edit_mode == EditMode.PAINT:
+		edit_mode = EditMode.INSPECT
+		mode_toggle_button.text = "Mode: Inspect Cell (Click to view/edit properties)"
+	else:
+		edit_mode = EditMode.PAINT
+		mode_toggle_button.text = "Mode: Paint Cell (Click to apply brush)"
+	
+	# Hide properties panel when switching modes
+	_hide_properties_panel()
+
+
+func _show_properties_panel(x: int, y: int) -> void:
+	current_selected_cell_x = x
+	current_selected_cell_y = y
+	
+	var cell = meta_room.get_cell(x, y)
+	if not cell:
+		return
+	
+	# Update property controls with current cell values
+	prop_cell_type_option.selected = cell.cell_type
+	
+	prop_conn_up_check.set_pressed_no_signal(cell.connection_up)
+	prop_conn_right_check.set_pressed_no_signal(cell.connection_right)
+	prop_conn_bottom_check.set_pressed_no_signal(cell.connection_bottom)
+	prop_conn_left_check.set_pressed_no_signal(cell.connection_left)
+	
+	prop_conn_up_req_check.set_pressed_no_signal(cell.connection_up_required)
+	prop_conn_right_req_check.set_pressed_no_signal(cell.connection_right_required)
+	prop_conn_bottom_req_check.set_pressed_no_signal(cell.connection_bottom_required)
+	prop_conn_left_req_check.set_pressed_no_signal(cell.connection_left_required)
+	
+	properties_panel.visible = true
+	properties_visible = true
+
+
+func _hide_properties_panel() -> void:
+	properties_panel.visible = false
+	properties_visible = false
+	current_selected_cell_x = -1
+	current_selected_cell_y = -1
+
+
+func _on_close_properties() -> void:
+	_hide_properties_panel()
+
+
+func _on_prop_cell_type_changed(index: int) -> void:
+	if current_selected_cell_x < 0 or current_selected_cell_y < 0:
+		return
+	
+	var cell = meta_room.get_cell(current_selected_cell_x, current_selected_cell_y)
+	if not cell:
+		return
+	
+	cell.cell_type = prop_cell_type_option.get_item_id(index)
+	_update_cell_button_at(current_selected_cell_x, current_selected_cell_y)
+	meta_room.emit_changed()
+
+
+func _on_prop_connection_changed(enabled: bool, direction: MetaCell.Direction) -> void:
+	if current_selected_cell_x < 0 or current_selected_cell_y < 0:
+		return
+	
+	var cell = meta_room.get_cell(current_selected_cell_x, current_selected_cell_y)
+	if not cell:
+		return
+	
+	cell.set_connection(direction, enabled)
+	_update_cell_button_at(current_selected_cell_x, current_selected_cell_y)
+	meta_room.emit_changed()
+
+
+func _on_prop_connection_required_changed(enabled: bool, direction: MetaCell.Direction) -> void:
+	if current_selected_cell_x < 0 or current_selected_cell_y < 0:
+		return
+	
+	var cell = meta_room.get_cell(current_selected_cell_x, current_selected_cell_y)
+	if not cell:
+		return
+	
+	cell.set_connection_required(direction, enabled)
+	_update_cell_button_at(current_selected_cell_x, current_selected_cell_y)
+	meta_room.emit_changed()
+
+
+func _update_cell_button_at(x: int, y: int) -> void:
+	var cell = meta_room.get_cell(x, y)
+	if not cell:
+		return
+	
+	var btn_index = y * meta_room.width + x
+	if btn_index < cell_buttons.size():
+		_update_cell_button(cell_buttons[btn_index], cell, x, y)
 
 
 func _refresh_grid() -> void:
@@ -240,13 +491,13 @@ func _update_cell_button(btn: Button, cell: MetaCell, x: int, y: int) -> void:
 	# Add connection indicators
 	var conn_text = ""
 	if cell.connection_up:
-		conn_text += "↑"
+		conn_text += "↑" if not cell.connection_up_required else "⬆"
 	if cell.connection_right:
-		conn_text += "→"
+		conn_text += "→" if not cell.connection_right_required else "⮕"
 	if cell.connection_bottom:
-		conn_text += "↓"
+		conn_text += "↓" if not cell.connection_bottom_required else "⬇"
 	if cell.connection_left:
-		conn_text += "←"
+		conn_text += "←" if not cell.connection_left_required else "⬅"
 	
 	if conn_text:
 		text += "\n" + conn_text
@@ -269,22 +520,28 @@ func _on_cell_clicked(x: int, y: int) -> void:
 	if not cell:
 		return
 	
-	# Apply cell type
-	cell.cell_type = selected_cell_type
-	
-	# Apply connection if one is selected
-	if selected_connection_direction >= 0:
-		var direction = selected_connection_direction as MetaCell.Direction
-		var current = cell.has_connection(direction)
-		cell.set_connection(direction, not current)
-	
-	# Update button appearance
-	var btn_index = y * meta_room.width + x
-	if btn_index < cell_buttons.size():
-		_update_cell_button(cell_buttons[btn_index], cell, x, y)
-	
-	# Notify that the resource changed
-	meta_room.emit_changed()
+	# Handle based on edit mode
+	if edit_mode == EditMode.INSPECT:
+		# Show properties panel for this cell
+		_show_properties_panel(x, y)
+	else:
+		# Paint mode - apply brushes
+		# Apply cell type
+		cell.cell_type = selected_cell_type
+		
+		# Apply connection if one is selected
+		if selected_connection_direction >= 0:
+			var direction = selected_connection_direction as MetaCell.Direction
+			var current = cell.has_connection(direction)
+			cell.set_connection(direction, not current)
+		
+		# Update button appearance
+		var btn_index = y * meta_room.width + x
+		if btn_index < cell_buttons.size():
+			_update_cell_button(cell_buttons[btn_index], cell, x, y)
+		
+		# Notify that the resource changed
+		meta_room.emit_changed()
 
 
 func _on_cell_type_selected(cell_type: MetaCell.CellType) -> void:

@@ -187,7 +187,7 @@ func _setup_ui() -> void:
 		var checkbox = CheckBox.new()
 		checkbox.text = directions[i]
 		# Check if this direction is in required_connections
-		checkbox.button_pressed = (i in meta_room.required_connections)
+		checkbox.button_pressed = meta_room.required_connections.has(i)
 		checkbox.toggled.connect(_on_required_connection_toggled.bind(i))
 		req_conn_container.add_child(checkbox)
 		required_connection_checkboxes[i] = checkbox
@@ -398,11 +398,11 @@ func _on_required_connection_toggled(is_checked: bool, direction: int) -> void:
 	# Update the required_connections array
 	if is_checked:
 		# Add the direction if not already present
-		if not (direction in meta_room.required_connections):
+		if not meta_room.required_connections.has(direction):
 			meta_room.required_connections.append(direction)
 	else:
 		# Remove the direction if present
-		if direction in meta_room.required_connections:
+		if meta_room.required_connections.has(direction):
 			meta_room.required_connections.erase(direction)
 	
 	# Notify that the resource changed

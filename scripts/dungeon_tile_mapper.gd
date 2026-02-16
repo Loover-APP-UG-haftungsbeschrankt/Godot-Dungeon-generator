@@ -6,6 +6,9 @@ extends TileMapLayer
 
 @export var generator: DungeonGenerator
 
+# Floor pattern variation constant
+const FLOOR_VARIATION_PATTERN = 3
+
 # Tile atlas coordinates for different tile types
 # These correspond to positions in castle_dungeon_tileset.png
 const TILE_FLOOR = Vector2i(0, 0)           # Basic floor tile
@@ -91,7 +94,7 @@ func _get_tile_for_cell(cell: MetaCell, room: MetaRoom, x: int, y: int) -> Vecto
 	# Floor cells
 	if cell.cell_type == MetaCell.CellType.FLOOR:
 		# Alternate between light and dark floor for variety
-		if (x + y) % 3 == 0:
+		if (x + y) % FLOOR_VARIATION_PATTERN == 0:
 			return TILE_FLOOR_DARK
 		return TILE_FLOOR
 	

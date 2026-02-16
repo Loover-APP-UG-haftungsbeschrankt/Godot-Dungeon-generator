@@ -28,6 +28,7 @@ compactness_bias = 0.65
 [node name="TileMapLayer" type="TileMapLayer" parent="."]
 tile_set = ExtResource("9_tileset")
 script = ExtResource("10_tilemapper")
+generator = NodePath("../DungeonGenerator")
 
 [node name="DungeonVisualizer" type="Node2D" parent="." unique_id=1074786944]
 script = ExtResource("6")

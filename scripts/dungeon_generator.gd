@@ -26,6 +26,9 @@ class PlacedRoom:
 ## Walker class for multi-walker dungeon generation
 ## Each walker independently places rooms until it dies or reaches its room limit
 class Walker:
+	## Sentinel value indicating no preferred direction
+	const NO_DIRECTION: int = -1
+	
 	var current_room: PlacedRoom  ## The room the walker is currently at
 	var rooms_placed: int = 0     ## Number of rooms this walker has placed
 	var is_alive: bool = true     ## Whether this walker is still active
@@ -33,9 +36,9 @@ class Walker:
 	var walker_id: int            ## Unique identifier for this walker
 	var path_history: Array[Vector2i] = []  ## History of room positions visited
 	var color: Color              ## Visual color for this walker
-	var next_direction: int = -1  ## Preferred direction for next placement (MetaCell.Direction or -1 for none)
+	var next_direction: int = NO_DIRECTION  ## Preferred direction for next placement (MetaCell.Direction or NO_DIRECTION)
 	
-	func _init(starting_room: PlacedRoom, p_max_rooms: int, p_walker_id: int = 0, p_next_direction: int = -1):
+	func _init(starting_room: PlacedRoom, p_max_rooms: int, p_walker_id: int = 0, p_next_direction: int = NO_DIRECTION):
 		current_room = starting_room
 		max_rooms = p_max_rooms
 		walker_id = p_walker_id
@@ -280,7 +283,7 @@ func _walker_try_place_room(walker: Walker) -> bool:
 		return false
 	
 	# If walker has a preferred next_direction, prioritize that connection
-	if walker.next_direction != -1:
+	if walker.next_direction != Walker.NO_DIRECTION:
 		var preferred_connections: Array[MetaRoom.ConnectionPoint] = []
 		var other_connections: Array[MetaRoom.ConnectionPoint] = []
 		
@@ -298,7 +301,7 @@ func _walker_try_place_room(walker: Walker) -> bool:
 		open_connections = preferred_connections + other_connections
 		
 		# Clear next_direction after using it once
-		walker.next_direction = -1
+		walker.next_direction = Walker.NO_DIRECTION
 	else:
 		# Shuffle connections for randomness, but apply compactness bias
 		open_connections.shuffle()

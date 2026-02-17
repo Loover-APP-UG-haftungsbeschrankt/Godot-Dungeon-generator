@@ -33,9 +33,9 @@ class Walker:
 	var walker_id: int            ## Unique identifier for this walker
 	var path_history: Array[Vector2i] = []  ## History of room positions visited
 	var color: Color              ## Visual color for this walker
-	var next_direction: Variant = null  ## Preferred direction for next placement (MetaCell.Direction or null)
+	var next_direction: int = -1  ## Preferred direction for next placement (MetaCell.Direction or -1 for none)
 	
-	func _init(starting_room: PlacedRoom, p_max_rooms: int, p_walker_id: int = 0, p_next_direction: Variant = null):
+	func _init(starting_room: PlacedRoom, p_max_rooms: int, p_walker_id: int = 0, p_next_direction: int = -1):
 		current_room = starting_room
 		max_rooms = p_max_rooms
 		walker_id = p_walker_id
@@ -280,7 +280,7 @@ func _walker_try_place_room(walker: Walker) -> bool:
 		return false
 	
 	# If walker has a preferred next_direction, prioritize that connection
-	if walker.next_direction != null:
+	if walker.next_direction != -1:
 		var preferred_connections: Array[MetaRoom.ConnectionPoint] = []
 		var other_connections: Array[MetaRoom.ConnectionPoint] = []
 		
@@ -298,7 +298,7 @@ func _walker_try_place_room(walker: Walker) -> bool:
 		open_connections = preferred_connections + other_connections
 		
 		# Clear next_direction after using it once
-		walker.next_direction = null
+		walker.next_direction = -1
 	else:
 		# Shuffle connections for randomness, but apply compactness bias
 		open_connections.shuffle()
@@ -402,7 +402,7 @@ func _spawn_walkers_for_required_connections(placement: PlacedRoom) -> void:
 		return
 	
 	# Get the connected directions for this room
-	var connected_dirs: Array = []
+	var connected_dirs: Array[int] = []
 	if room_connected_directions.has(placement):
 		connected_dirs = room_connected_directions[placement]
 	
@@ -466,7 +466,7 @@ func _are_required_connections_satisfied(placement: PlacedRoom) -> bool:
 		return true
 	
 	# Get the connected directions for this room
-	var connected_dirs: Array = []
+	var connected_dirs: Array[int] = []
 	if room_connected_directions.has(placement):
 		connected_dirs = room_connected_directions[placement]
 	

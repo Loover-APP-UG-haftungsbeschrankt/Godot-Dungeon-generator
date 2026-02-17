@@ -263,6 +263,14 @@ func _try_place_next_room(current_placement: PlacedRoom) -> PlacedRoom:
 	return null
 
 
+## Applies randomness and compactness bias to connection ordering
+func _apply_connection_ordering(placed_room: PlacedRoom, connections: Array[MetaRoom.ConnectionPoint]) -> Array[MetaRoom.ConnectionPoint]:
+	connections.shuffle()
+	if compactness_bias > 0:
+		connections = _sort_connections_by_compactness(placed_room, connections)
+	return connections
+
+
 ## Walker attempts to place a room from its current position
 ## Returns true if a room was successfully placed
 func _walker_try_place_room(walker: Walker) -> bool:
@@ -297,19 +305,14 @@ func _walker_try_place_room(walker: Walker) -> bool:
 				other_connections.append(conn)
 		
 		# Try preferred direction first, then fall back to others
-		other_connections.shuffle()
-		if compactness_bias > 0:
-			other_connections = _sort_connections_by_compactness(walker.current_room, other_connections)
-		
+		other_connections = _apply_connection_ordering(walker.current_room, other_connections)
 		open_connections = preferred_connections + other_connections
 		
 		# Clear next_direction after using it once
 		walker.next_direction = Walker.NO_DIRECTION
 	else:
-		# Shuffle connections for randomness, but apply compactness bias
-		open_connections.shuffle()
-		if compactness_bias > 0:
-			open_connections = _sort_connections_by_compactness(walker.current_room, open_connections)
+		# Apply randomness and compactness bias
+		open_connections = _apply_connection_ordering(walker.current_room, open_connections)
 	
 	# Try to place a room at each open connection
 	for conn_point in open_connections:

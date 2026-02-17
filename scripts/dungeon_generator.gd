@@ -33,13 +33,15 @@ class Walker:
 	var walker_id: int            ## Unique identifier for this walker
 	var path_history: Array[Vector2i] = []  ## History of room positions visited
 	var color: Color              ## Visual color for this walker
+	var next_direction: Variant = null  ## Preferred direction for next placement (MetaCell.Direction or null)
 	
-	func _init(starting_room: PlacedRoom, p_max_rooms: int, p_walker_id: int = 0):
+	func _init(starting_room: PlacedRoom, p_max_rooms: int, p_walker_id: int = 0, p_next_direction: Variant = null):
 		current_room = starting_room
 		max_rooms = p_max_rooms
 		walker_id = p_walker_id
 		rooms_placed = 0
 		is_alive = true
+		next_direction = p_next_direction
 		path_history.append(starting_room.position)
 		# Assign unique color based on walker ID
 		color = _generate_walker_color(p_walker_id)
@@ -277,10 +279,31 @@ func _walker_try_place_room(walker: Walker) -> bool:
 	if available_templates.is_empty():
 		return false
 	
-	# Shuffle connections for randomness, but apply compactness bias
-	open_connections.shuffle()
-	if compactness_bias > 0:
-		open_connections = _sort_connections_by_compactness(walker.current_room, open_connections)
+	# If walker has a preferred next_direction, prioritize that connection
+	if walker.next_direction != null:
+		var preferred_connections: Array[MetaRoom.ConnectionPoint] = []
+		var other_connections: Array[MetaRoom.ConnectionPoint] = []
+		
+		for conn in open_connections:
+			if conn.direction == walker.next_direction:
+				preferred_connections.append(conn)
+			else:
+				other_connections.append(conn)
+		
+		# Try preferred direction first, then fall back to others
+		other_connections.shuffle()
+		if compactness_bias > 0:
+			other_connections = _sort_connections_by_compactness(walker.current_room, other_connections)
+		
+		open_connections = preferred_connections + other_connections
+		
+		# Clear next_direction after using it once
+		walker.next_direction = null
+	else:
+		# Shuffle connections for randomness, but apply compactness bias
+		open_connections.shuffle()
+		if compactness_bias > 0:
+			open_connections = _sort_connections_by_compactness(walker.current_room, open_connections)
 	
 	# Try to place a room at each open connection
 	for conn_point in open_connections:
@@ -316,6 +339,10 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					walker.move_to_room(placement)
 					# Emit signal for visualization
 					room_placed.emit(placement, walker)
+					
+					# Spawn walkers for unsatisfied required connections
+					_spawn_walkers_for_required_connections(placement)
+					
 					return true
 	
 	return false
@@ -366,6 +393,28 @@ func _get_open_connections(placement: PlacedRoom) -> Array[MetaRoom.ConnectionPo
 			open_connections.append(conn_point)
 	
 	return open_connections
+
+
+## Spawns walkers for any unsatisfied required connections in a placed room
+func _spawn_walkers_for_required_connections(placement: PlacedRoom) -> void:
+	# If room has no required connections, nothing to do
+	if placement.room.required_connections.is_empty():
+		return
+	
+	# Get the connected directions for this room
+	var connected_dirs: Array = []
+	if room_connected_directions.has(placement):
+		connected_dirs = room_connected_directions[placement]
+	
+	# Find unsatisfied required connections
+	for required_dir in placement.room.required_connections:
+		if not connected_dirs.has(required_dir):
+			# This required direction is not yet satisfied - spawn a walker
+			var new_walker = Walker.new(placement, max_rooms_per_walker, next_walker_id, required_dir)
+			next_walker_id += 1
+			active_walkers.append(new_walker)
+			# Emit signal for visualization (spawn at same position, not a teleport)
+			walker_moved.emit(new_walker, placement.position, placement.position, false)
 
 
 ## Gets a random placed room that has at least one open connection

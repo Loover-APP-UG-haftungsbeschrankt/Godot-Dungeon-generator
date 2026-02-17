@@ -141,6 +141,7 @@ The generator uses a **multi-walker room placement algorithm** that creates more
    - **Only tries unused room templates** (each template can only be placed once)
    - Tries up to 10 times per room (different unused templates/rotations)
    - If successful, marks template as used, moves to the newly placed room
+   - **Directional Preference**: Walkers can have a `next_direction` property that makes them prefer specific directions
    - If failed, teleports to a random room with open connections
    - Dies after placing its maximum number of rooms
    - When a walker dies, a new one spawns at a random room with open connections
@@ -152,25 +153,47 @@ The generator uses a **multi-walker room placement algorithm** that creates more
    - **Prefers rooms with unsatisfied required connections** (70% of the time)
    - This ensures rooms with required connections get properly connected
 
-4. **Generation Loop**:
+4. **Automatic Walker Spawning for Required Connections**:
+   - When a room with required connections is placed, the generator checks which connections are satisfied
+   - **For each unsatisfied required connection, a new walker is spawned**:
+     - Spawned at the newly placed room
+     - `next_direction` is set to the unsatisfied direction
+     - Walker starts with `rooms_placed = 0` (fresh walker)
+   - **Example (T-Room)**: 
+     - T-room has 3 required connections: UP, LEFT, RIGHT
+     - Walker enters from UP → UP is satisfied
+     - Walker exits to LEFT → LEFT is satisfied
+     - RIGHT is still open → Spawn new walker with `next_direction = RIGHT`
+   - **Example (L-Room)**:
+     - L-room has 2 required connections: UP, RIGHT
+     - Walker enters from UP → UP is satisfied
+     - Walker exits to RIGHT → RIGHT is satisfied
+     - All connections satisfied → No new walker spawned
+
+5. **Generation Loop**:
    - Each iteration, all walkers attempt to place one room
    - Continues until target cell count is reached
    - Allows loops: walkers can connect to existing rooms (reduces dead ends)
    - Safety limit prevents infinite loops
 
-5. **Room Placement**:
-   - Pick random connection from walker's current room
+6. **Room Placement**:
+   - **Check walker's `next_direction`**: If set, prioritize connections in that direction
+   - Pick random connection from walker's current room (or preferred direction)
    - Try random unused template and rotation
    - Check if room can be placed (allowing blocked cell overlaps)
    - If valid, **place the cloned room**, mark template as used, merge overlapping connections
    - Track which connections got connected for required connection validation
+   - **Spawn walkers for unsatisfied required connections**
    - Walker moves to the new room
+   - `next_direction` is cleared after one use
 
 #### Key Features:
 
 - **No Duplicate Rooms**: Each room template can only be placed once
 - **Required Connections**: Rooms can specify connections that MUST be used
 - **Smart Walker Spawning**: Prioritizes rooms with unsatisfied required connections
+- **Automatic Walker Spawning**: Rooms with unsatisfied required connections spawn dedicated walkers
+- **Directional Walker Preference**: Walkers can prefer specific directions (via `next_direction` property)
 - **Multiple Simultaneous Walkers**: 3+ walkers work in parallel for varied layouts
 - **Cell-Count Based**: Stops at target cell count, not room count (more precise control)
 - **Automatic Loop Creation**: Walkers can connect to existing rooms naturally

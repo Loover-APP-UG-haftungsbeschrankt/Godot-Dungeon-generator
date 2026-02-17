@@ -407,14 +407,14 @@ func _spawn_walkers_for_required_connections(placement: PlacedRoom) -> void:
 	if placement.room.required_connections.is_empty():
 		return
 	
-	# Get the connected directions for this room
-	var connected_dirs: Array[int] = []
+	# Get the already satisfied directions for this room
+	var satisfied_directions: Array[int] = []
 	if room_connected_directions.has(placement):
-		connected_dirs = room_connected_directions[placement]
+		satisfied_directions = room_connected_directions[placement]
 	
 	# Find unsatisfied required connections
 	for required_dir in placement.room.required_connections:
-		if not connected_dirs.has(required_dir):
+		if not satisfied_directions.has(required_dir):
 			# This required direction is not yet satisfied - spawn a walker
 			# Use smaller room limit since this walker has a specific purpose
 			# Parameters: starting_room, max_rooms, walker_id, next_direction

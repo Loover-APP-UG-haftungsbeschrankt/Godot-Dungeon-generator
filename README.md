@@ -2,6 +2,17 @@
 
 A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algorithm. This system allows you to create complex, interconnected dungeons with loops by connecting pre-made room templates.
 
+## 📚 Documentation
+
+**→ [INDEX.md](INDEX.md) - Complete documentation roadmap with reading paths and quick start guides**
+
+Comprehensive documentation for understanding and implementing atomic multi-room placement:
+
+- **[README_EXPLORATION_SUMMARY.md](README_EXPLORATION_SUMMARY.md)** - Start here! Overview of the exploration and links to all documentation
+- **[ARCHITECTURE_OVERVIEW.md](ARCHITECTURE_OVERVIEW.md)** - Deep dive into the system architecture and implementation details
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Fast implementation guide with code snippets for atomic multi-room placement
+- **[VISUAL_GUIDE.md](VISUAL_GUIDE.md)** - Visual explanations with ASCII diagrams and examples
+
 ## Features
 
 - **Multi-Walker Generation**: Multiple independent walkers simultaneously place rooms

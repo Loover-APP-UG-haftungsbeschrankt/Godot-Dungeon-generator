@@ -1,27 +1,39 @@
 # Godot 4.6 Dungeon Generator
 
-A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algorithm. This system allows you to create complex, interconnected dungeons with loops by connecting pre-made room templates.
+A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algorithm. This system creates complex, interconnected dungeons by connecting pre-made room templates with automatic overlap handling for compact layouts.
 
 ## Features
 
-- **Multi-Walker Generation**: Multiple independent walkers simultaneously place rooms
-- **Walker Visualization**: See walkers in action with colored markers and path trails
-- **Compactness Control**: Adjustable bias for tighter, less sprawling dungeons
-- **Step-by-Step Mode**: Watch generation happen in slow motion for debugging
-- **Unique Room Placement**: Each room template can only be placed once (no duplicates)
-- **Required Connections**: Rooms can specify connections that MUST be connected (e.g., T-rooms need all 3 connections used)
-- **Smart Walker Spawning**: New walkers spawn at current position or rooms with unsatisfied required connections
-- **Interconnected Dungeons**: Walkers create loops by connecting to existing rooms
-- **Cell-Count Based**: Generation stops when a target cell count is reached (not just room count)
-- **Resource-Based Room Templates**: Create and edit room layouts in the Godot editor
-- **Visual Room Editor**: Interactive grid-based editor plugin for easy room creation
+### Core Generation
+- **Multi-Walker Generation**: Multiple independent walkers simultaneously place rooms for organic layouts
+- **Compactness Control**: Adjustable bias (0.0-1.0) for tighter or sprawling dungeons
+- **Cell-Count Based**: Generation stops when a target cell count is reached (precise size control)
 - **Smart Room Rotation**: Automatically tries all 4 rotations to find valid placements
-- **Connection Matching**: Ensures rooms connect properly with matching door directions
-- **Blocked Cell Overlap**: Rooms share their edge walls for compact, realistic dungeons
+- **Blocked Cell Overlap**: Rooms share their edge walls for compact, realistic dungeons (16-27% smaller)
 - **Connection Merging**: Opposing connections create solid walls when rooms overlap
-- **Configurable**: Easy to add new room templates and adjust generation parameters
-- **Visual Debug**: Built-in visualizer to see generated dungeons
-- **Camera Controls**: Pan and zoom to explore dungeons at any scale
+- **Resource-Based Room Templates**: Create and edit room layouts in the Godot editor
+- **Configurable Parameters**: Easy to tune generation behavior
+
+### Room Templates
+- **Visual Room Editor**: Interactive grid-based editor plugin for easy room creation
+- **Connection Matching**: Ensures rooms connect properly with matching door directions
+- **Template Cloning**: All rooms are cloned before placement to preserve original templates
+- **Consecutive Duplicate Prevention**: Same template won't be placed twice in a row by same walker
+
+### Visualization & Debugging
+- **Advanced Walker Visualization**: See walkers in action with colored markers and path trails
+  - Unique colors per walker (golden ratio-based color generation)
+  - Complete path history with gradient fade on older segments
+  - Exact teleport detection with dotted lines
+  - Return detection with different visual styling
+  - Step numbers showing walker progression at every room
+- **Per-Walker Path Controls**: Toggle individual walker paths on/off (keyboard 0-9 or UI checkboxes)
+- **Toggle All Button**: Quickly enable/disable all walker paths at once
+- **Mouse Position Display**: Real-time grid coordinates under mouse cursor
+- **Step-by-Step Mode**: Watch generation happen in slow motion for debugging
+- **Live Statistics**: Room count, cell count, walker count, dungeon dimensions, seed, and compactness
+- **Visual Debug Renderer**: Built-in visualizer to see generated dungeons
+- **Camera Controls**: Pan and zoom to explore dungeons at any scale (including touchpad gestures)
 
 ## Project Structure
 
@@ -56,20 +68,16 @@ A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algori
 Each cell in a room has:
 - **Type**: BLOCKED, FLOOR, or DOOR
 - **Connections**: UP, RIGHT, BOTTOM, LEFT flags indicating where this cell can connect to adjacent rooms
-- **Required Connection Flags**: Each connection can be marked as required (must be connected during generation)
-  - `connection_up_required`, `connection_right_required`, etc.
-  - Used for enforcing specific connection patterns within individual cells
-  - Visual editor shows required connections with thicker arrows (⬆⮕⬇⬅)
+- **Connection Required Flag**: Optional boolean flag to mark a cell's connection as important
+  - Used for visual editor hints and potential future features
+  - Not currently enforced during generation
 
 ### 2. MetaRoom
 A room template consisting of:
 - Width and height dimensions
 - Grid of MetaCells
 - Connection points (cells on edges with connections)
-- **Required Connections**: Array of directions that MUST be connected to other rooms
-  - Example: A T-room with 3 connections should have `required_connections = [UP, LEFT, RIGHT]`
-  - Ensures rooms make logical sense (no T-rooms with only 1 connection used)
-  - Generator prefers placing rooms near those with unsatisfied required connections
+- Optional room name for identification
 
 ### 3. Room Rotation
 The `RoomRotator` class can rotate rooms by 0°, 90°, 180°, or 270°:
@@ -95,8 +103,6 @@ Room A    +    Room B    =    Combined (5 cells, not 6)
 	   [■] = Shared blocked cell (overlap)
 ```
 
-See `ROOM_OVERLAP_SYSTEM.md` for technical details and `ROOM_OVERLAP_EXAMPLES.md` for visual examples.
-
 ### 5. Resource Cloning and Safe Modifications
 
 To enable safe modifications during dungeon generation (like setting cell types to DOOR at connection points), the generator **clones all rooms before placement**:
@@ -121,8 +127,6 @@ This allows you to safely implement features like:
 - Modifying cell properties during placement
 - Implementing custom room merging logic
 
-See `DOOR_PLACEMENT_FIX.md` for detailed explanation of this system.
-
 ### 6. Multi-Walker Dungeon Generation Algorithm
 
 The generator uses a **multi-walker room placement algorithm** that creates more organic, interconnected dungeons:
@@ -132,15 +136,14 @@ The generator uses a **multi-walker room placement algorithm** that creates more
 1. **Initialization**:
    - Start with a random room that has connections
    - **Clone it** to avoid modifying the template
-   - Mark it as used (no duplicates allowed)
    - Place it at the origin (0, 0)
    - Spawn multiple walkers at the first room
 
 2. **Walker Behavior**:
    - Each walker independently tries to place rooms from its current position
-   - **Only tries unused room templates** (each template can only be placed once)
-   - Tries up to 10 times per room (different unused templates/rotations)
-   - If successful, marks template as used, moves to the newly placed room
+   - **Avoids consecutive duplicate templates** (prevents same template being placed twice in a row by same walker)
+   - Tries up to 10 times per room (different templates/rotations)
+   - If successful, moves to the newly placed room
    - If failed, teleports to a random room with open connections
    - Dies after placing its maximum number of rooms
    - When a walker dies, a new one spawns at a random room with open connections
@@ -149,8 +152,7 @@ The generator uses a **multi-walker room placement algorithm** that creates more
    - When a walker dies, a new one spawns
    - **50% chance to spawn at the dead walker's current position** (if it has open connections)
    - 50% chance to spawn at a random room with open connections
-   - **Prefers rooms with unsatisfied required connections** (70% of the time)
-   - This ensures rooms with required connections get properly connected
+   - This creates varied dungeon layouts with both continued growth and new exploration branches
 
 4. **Generation Loop**:
    - Each iteration, all walkers attempt to place one room
@@ -160,22 +162,20 @@ The generator uses a **multi-walker room placement algorithm** that creates more
 
 5. **Room Placement**:
    - Pick random connection from walker's current room
-   - Try random unused template and rotation
+   - Try random template and rotation
    - Check if room can be placed (allowing blocked cell overlaps)
-   - If valid, **place the cloned room**, mark template as used, merge overlapping connections
-   - Track which connections got connected for required connection validation
+   - If valid, **place the cloned room**, merge overlapping connections
    - Walker moves to the new room
 
 #### Key Features:
 
-- **No Duplicate Rooms**: Each room template can only be placed once
-- **Required Connections**: Rooms can specify connections that MUST be used
-- **Smart Walker Spawning**: Prioritizes rooms with unsatisfied required connections
+- **Consecutive Duplicate Prevention**: Same template won't be placed twice in a row by the same walker
 - **Multiple Simultaneous Walkers**: 3+ walkers work in parallel for varied layouts
 - **Cell-Count Based**: Stops at target cell count, not room count (more precise control)
 - **Automatic Loop Creation**: Walkers can connect to existing rooms naturally
 - **Smart Teleportation**: Walkers jump to rooms with open connections when stuck
 - **Walker Lifecycle**: Dead walkers respawn, maintaining constant exploration
+- **Walker Color System**: Each walker gets a unique color using golden ratio-based color generation
 - **All placed rooms are clones**: Templates remain unchanged
 - **Smart connection matching**: Opposite directions must match
 - **Blocked cell overlap**: Compact dungeons with shared walls
@@ -188,12 +188,14 @@ The generator uses a **multi-walker room placement algorithm** that creates more
 - `max_rooms_per_walker`: Max rooms each walker places before dying (default: 20)
 - `max_placement_attempts_per_room`: Tries per room placement (default: 10)
 - `target_meta_cell_count`: Stop when this many cells are placed (default: 500)
+- `compactness_bias`: How compact dungeons are (0.0 = random, 1.0 = very compact, default: 0.3)
 
 This algorithm creates dungeons with:
 - More organic layouts (multiple growth points)
 - Fewer dead ends (walkers create loops)
 - Better connectivity (walkers meet and merge)
 - Predictable size (cell count based, not room count)
+- Unique walker paths (visible in debug visualization)
 
 ## Usage
 
@@ -229,26 +231,26 @@ This algorithm creates dungeons with:
 #### Walker Visualization Features
 
 The visualizer now shows:
-- **Colored Walker Markers**: Each walker has a unique color and displays its ID
+- **Colored Walker Markers**: Each walker has a unique color (generated using golden ratio) and displays its ID
   - Walkers are positioned at the **center of rooms** for better visualization
   - Larger size and thicker outline for improved visibility
 - **Enhanced Path Trails**: See the complete history of where each walker has been
   - **Wider path lines** (4px default, configurable via `path_line_width`)
   - Path lines connect room centers, not corners
-  - **Dotted lines for teleports**: Exact detection when walker respawns to different location **(IMPROVED!)**
+  - **Dotted lines for teleports**: Exact detection when walker respawns to different location
+  - **Thinner lines for returns**: Different visual when walker returns to previously visited room
   - Gradient fade effect on older path segments
-  - **Return detection**: Thinner lines when walker returns to previously visited room
 - **Step Numbers**: Numbered markers at **every room** the walker visits
   - Shows the progression of walker movement
   - **Return indicators**: Different background color (dark red) when returning to visited room
   - Improved text centering for better readability
 - **Walker Selection UI**: Graphical panel with checkboxes to toggle individual walker paths
   - Color-coded indicators for each walker
-  - **"Toggle All" button**: Quickly enable/disable all walker paths at once **(NEW!)**
-  - **Works during generation**: UI updates when walkers spawn/respawn **(NEW!)**
+  - **"Toggle All" button**: Quickly enable/disable all walker paths at once
+  - **Works during generation**: UI updates dynamically when walkers spawn/respawn
   - Syncs with keyboard shortcuts (0-9 keys)
   - Located in top-right corner
-- **Mouse Position Display**: Real-time grid coordinates under mouse cursor **(NEW!)**
+- **Mouse Position Display**: Real-time grid coordinates under mouse cursor
   - Shows meta cell position: "Cell: (x, y)"
   - Located in bottom-right corner
   - Updates continuously as mouse moves
@@ -258,12 +260,8 @@ The visualizer now shows:
   - Press `0` to toggle walker 0's path, `1` for walker 1, etc.
   - Click checkboxes in the Walker Path Visibility panel
   - Helps focus on specific walker behaviors
-- **Live Statistics**: Active walker count, compactness bias, and more
+- **Live Statistics**: Active walker count, compactness bias, seed, room count, cell count, and dungeon dimensions
 - **Step-by-Step Mode**: Watch the generation algorithm work in real-time
-
-See `WALKER_VISUALIZATION.md` for detailed documentation on the visualization system.
-
-See `CAMERA_CONTROLS.md` for detailed camera documentation.
 
 ### Creating Custom Room Templates
 
@@ -284,25 +282,19 @@ See `CAMERA_CONTROLS.md` for detailed camera documentation.
    - Properties panel appears showing:
      - **Cell Status**: Dropdown to select BLOCKED/FLOOR/DOOR
      - **Connections**: Checkboxes for all 4 directions (UP/RIGHT/BOTTOM/LEFT)
-     - **Required Flags**: Mark each connection as mandatory with additional checkboxes
    - Changes apply immediately to the cell
    - **Visual Feedback**: 
      - Regular connections shown with thin arrows (↑→↓←)
-     - Required connections shown with thick arrows (⬆⮕⬇⬅)
      - Cell types color-coded (dark=BLOCKED, light=FLOOR, blue=DOOR)
    - **Grid Label**: "Room Grid (Click to view/edit cell properties)"
    - No mode switching needed - every click opens the properties panel
 
-4. **Set Room-Level Required Connections**: 
-   - Use the Inspector's `required_connections` property
-   - Add directions that MUST be connected for the entire room
-   - For a T-room, set required_connections to [UP, LEFT, RIGHT]
-   - For a cross room, set required_connections to [UP, RIGHT, BOTTOM, LEFT]
-   - Leave empty for rooms where any connection is optional
+4. **Set Room Properties**: 
+   - Optional: Set a descriptive `room_name` for easier identification
 
 5. Save and use your new room!
 
-See `addons/meta_room_editor/README.md` for detailed editor documentation, or see `TESTING_COMPLETE.md` for the simplified editor verification report and UI mockup.
+See `addons/meta_room_editor/README.md` for detailed editor documentation.
 
 **Option 2: Manual Creation**
 
@@ -313,8 +305,7 @@ See `addons/meta_room_editor/README.md` for detailed editor documentation, or se
 5. For each cell:
    - Set cell_type (BLOCKED, FLOOR, DOOR)
    - Set connection flags for edge cells
-6. **Set required_connections array**: Add MetaCell.Direction values for required connections
-7. Save as `.tres` file in `resources/rooms/`
+6. Save as `.tres` file in `resources/rooms/`
 
 ### Using the Generator in Code
 
@@ -336,6 +327,7 @@ generator.max_rooms_per_walker = 20                # Max rooms per walker before
 generator.max_placement_attempts_per_room = 10     # Tries per room placement
 generator.target_meta_cell_count = 500             # Stop at this many cells
 generator.generation_seed = 12345                  # 0 for random
+generator.compactness_bias = 0.3                   # 0.0-1.0, how tight the dungeon is
 
 # Generate
 if generator.generate():
@@ -405,17 +397,13 @@ X X X
 3. **Edge Connections**: Place connections on room edges only
 4. **Symmetry**: Symmetric rooms work well with rotation
 5. **Dead Ends**: Include some rooms with only 1 connection for endpoints
-6. **Required Connections**: Set required_connections for rooms that need specific connections
-   - T-rooms should require all 3 connections: `[UP, LEFT, RIGHT]`
-   - Cross rooms should require all 4: `[UP, RIGHT, BOTTOM, LEFT]`
-   - L-corridors can have no required connections (flexible usage)
-   - Straight corridors can require both ends: `[UP, BOTTOM]` or `[LEFT, RIGHT]`
-7. **Unique Rooms**: Remember each template can only be placed once - create many variations!
+6. **Many Variations**: Create lots of room templates - walkers will try different templates randomly
+7. **Balanced Pool**: Having diverse room shapes and sizes creates more interesting dungeons
 
 ## Configuration Parameters
 
 ### DungeonGenerator
-- `room_templates`: Array of MetaRoom resources to use (each can only be placed once)
+- `room_templates`: Array of MetaRoom resources to use
 - `num_walkers`: Number of simultaneous walkers (default: 3)
 - `max_rooms_per_walker`: Max rooms each walker can place before dying (default: 20)
 - `max_placement_attempts_per_room`: Max attempts to place each room (default: 10)
@@ -431,7 +419,6 @@ X X X
 - `height`: Height of the room in cells
 - `cells`: Array of MetaCell resources
 - `room_name`: Identifier for this room template
-- `required_connections`: Array of MetaCell.Direction values that MUST be connected (new!)
 
 ### DungeonVisualizer
 - `cell_size`: Size of each cell in pixels (default: 32)
@@ -472,25 +459,200 @@ The generator is fast and reliable:
 - Collision detection uses Dictionary lookup (O(1))
 - Room rotation is lazy (only when needed)
 - Multiple walkers work in sequence (not parallel threads)
+- Room position caching for efficient path visualization
+
+### Performance Tips:
+- Larger room templates = fewer rooms needed = faster generation
+- Lower `max_placement_attempts_per_room` = faster but potentially incomplete dungeons
+- Higher `compactness_bias` = tighter dungeons with less wasted placement attempts
+- Visualization mode adds overhead - disable for production use
+
+## Known Limitations
+
+1. **Consecutive Duplicate Prevention Only**: The generator prevents the same template from being placed twice in a row by the same walker, but the same template can appear multiple times in different parts of the dungeon. This is by design to allow creating varied dungeons even with a limited template pool.
+
+2. **No Path Validation**: The generator doesn't verify that all rooms are reachable from the starting room. Isolated room clusters can occur in rare cases with very low compactness bias or incompatible room layouts. Consider implementing flood-fill validation if your game requires guaranteed connectivity (see "Extending the System" section).
+
+3. **No Dead-End Control**: Cannot specify desired number or placement of dead-end rooms.
+
+4. **Fixed Cell Size**: All cells are the same size - no support for multi-cell props or variable cell dimensions.
+
+5. **2D Only**: Currently designed for 2D dungeons only, though the system could be adapted for 3D.
+
+6. **Sequential Walkers**: Walkers are processed sequentially in the generation loop, not in parallel threads.
+
+7. **No Save/Load**: Generated dungeons exist only in memory during runtime. Implement your own serialization if needed.
+
+## Troubleshooting
+
+### Generation Fails (returns false)
+- **Not enough room templates**: Add more room varieties
+- **Incompatible room connections**: Ensure rooms have diverse connection patterns
+- **Target cell count too high**: Reduce `target_meta_cell_count` or add larger rooms
+- **Too few placement attempts**: Increase `max_placement_attempts_per_room`
+
+### Dungeons Are Too Sprawling
+- Increase `compactness_bias` (try 0.5-0.7)
+- Use more rooms with multiple connections (T-rooms, cross rooms)
+- Reduce `max_rooms_per_walker` to prevent long chains
+
+### Dungeons Are Too Compact/Dense
+- Decrease `compactness_bias` (try 0.1-0.2)
+- Use more straight corridors and L-corridors
+- Add larger room templates
+
+### Walker Visualization Is Slow
+- Disable path drawing with **P** key
+- Disable step numbers with **N** key
+- Reduce number of walkers
+- Use larger rooms (fewer total rooms to visualize)
+
+### Rooms Don't Connect Properly
+- Check that edge cells have proper connection flags
+- Verify connections are on opposite sides (UP connects to BOTTOM, LEFT to RIGHT)
+- Use the visual editor to see connection arrows
 
 ## Extending the System
 
-### Adding Features
+### Possible Extensions
 
 1. **Room Types/Tags**: Add metadata to rooms (combat, treasure, boss)
+   ```gdscript
+   # Add custom properties to MetaRoom
+   @export var room_type: String = "normal"  # combat, treasure, boss, etc.
+   @export var difficulty: int = 1
+   ```
+
 2. **Mandatory Rooms**: Ensure specific rooms always appear
-3. **Path Validation**: Ensure all rooms are reachable
-4. **Dead End Removal**: Post-process to remove unwanted dead ends
-5. **Door Generation**: Track actual door positions for spawning
+   ```gdscript
+   # Place required rooms first, then let walkers fill in the rest
+   var boss_room = preload("res://resources/rooms/boss_room.tres")
+   generator.place_room_at(boss_room, Vector2i(0, 0))
+   ```
+
+3. **Path Validation**: Ensure all rooms are reachable (optional but recommended for games requiring guaranteed connectivity)
+   ```gdscript
+   # Implement flood-fill after generation to verify connectivity
+   func validate_all_reachable(generator: DungeonGenerator) -> bool:
+       if generator.placed_rooms.is_empty():
+           return false
+       
+       var visited = {}
+       var queue = [generator.placed_rooms[0]]
+       visited[generator.placed_rooms[0]] = true
+       
+       while not queue.is_empty():
+           var current = queue.pop_front()
+           # Find connected neighbors through doors
+           # Add unvisited neighbors to queue and mark as visited
+           # (Implementation details depend on how you track connections)
+       
+       return visited.size() == generator.placed_rooms.size()
+   ```
+
+4. **Dead End Tracking**: Post-process to identify and optionally remove dead ends
+   ```gdscript
+   func find_dead_ends() -> Array[PlacedRoom]:
+       var dead_ends = []
+       for placed in generator.placed_rooms:
+           if count_active_connections(placed) == 1:
+               dead_ends.append(placed)
+       return dead_ends
+   ```
+
+5. **Door Position Tracking**: Track exact door cell positions for spawning
+   ```gdscript
+   # Access overlapping connection cells
+   for placed in generator.placed_rooms:
+       for y in range(placed.room.height):
+           for x in range(placed.room.width):
+               var cell = placed.room.get_cell(x, y)
+               if cell.cell_type == MetaCell.CellType.DOOR:
+                   var world_pos = placed.get_cell_world_pos(x, y)
+                   spawn_door(world_pos)
+   ```
+
+6. **Room Temperature System**: Track "heat" from central rooms for enemy difficulty
+   ```gdscript
+   # Calculate distance from start room to each placed room
+   # Use for spawning stronger enemies farther from start
+   ```
 
 ### Integration with Game
 
 Use the generated data to:
-- Spawn TileMap tiles
-- Place enemies and items
-- Create navigation meshes
-- Generate minimap data
-- Set up lighting and ambience
+
+```gdscript
+# Example: Spawn TileMap tiles
+func spawn_tilemap(generator: DungeonGenerator, tilemap: TileMap):
+	for placed in generator.placed_rooms:
+		for y in range(placed.room.height):
+			for x in range(placed.room.width):
+				var cell = placed.room.get_cell(x, y)
+				var world_pos = placed.get_cell_world_pos(x, y)
+				
+				match cell.cell_type:
+					MetaCell.CellType.FLOOR:
+						tilemap.set_cell(0, world_pos, 0, Vector2i(0, 0))
+					MetaCell.CellType.BLOCKED:
+						tilemap.set_cell(0, world_pos, 0, Vector2i(1, 0))
+					MetaCell.CellType.DOOR:
+						tilemap.set_cell(0, world_pos, 0, Vector2i(2, 0))
+
+# Example: Place enemies based on distance from start
+func spawn_enemies(generator: DungeonGenerator):
+	var start_pos = generator.placed_rooms[0].position
+	
+	for placed in generator.placed_rooms:
+		var distance = start_pos.distance_to(placed.position)
+		var enemy_count = int(distance / 3.0)  # More enemies farther away
+		
+		# Spawn enemies in floor cells
+		for y in range(placed.room.height):
+			for x in range(placed.room.width):
+				var cell = placed.room.get_cell(x, y)
+				if cell.cell_type == MetaCell.CellType.FLOOR and enemy_count > 0:
+					var world_pos = placed.get_cell_world_pos(x, y)
+					spawn_enemy_at(world_pos)
+					enemy_count -= 1
+
+# Example: Generate navigation mesh
+func create_navigation(generator: DungeonGenerator, nav_region: NavigationRegion2D):
+	var navigation_polygon = NavigationPolygon.new()
+	
+	# Add floor cells as walkable areas
+	for placed in generator.placed_rooms:
+		for y in range(placed.room.height):
+			for x in range(placed.room.width):
+				var cell = placed.room.get_cell(x, y)
+				if cell.cell_type != MetaCell.CellType.BLOCKED:
+					var world_pos = placed.get_cell_world_pos(x, y)
+					# Add cell to navigation polygon
+	
+	nav_region.navigation_polygon = navigation_polygon
+
+# Example: Create minimap
+func generate_minimap(generator: DungeonGenerator) -> Image:
+	var bounds = generator.get_dungeon_bounds()
+	var image = Image.create(bounds.size.x, bounds.size.y, false, Image.FORMAT_RGB8)
+	
+	for placed in generator.placed_rooms:
+		for y in range(placed.room.height):
+			for x in range(placed.room.width):
+				var cell = placed.room.get_cell(x, y)
+				var world_pos = placed.get_cell_world_pos(x, y)
+				var local_pos = world_pos - bounds.position
+				
+				match cell.cell_type:
+					MetaCell.CellType.FLOOR:
+						image.set_pixel(local_pos.x, local_pos.y, Color.WHITE)
+					MetaCell.CellType.BLOCKED:
+						image.set_pixel(local_pos.x, local_pos.y, Color.BLACK)
+					MetaCell.CellType.DOOR:
+						image.set_pixel(local_pos.x, local_pos.y, Color.BLUE)
+	
+	return image
+```
 
 ## License
 

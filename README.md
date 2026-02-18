@@ -136,7 +136,6 @@ The generator uses a **multi-walker room placement algorithm** that creates more
 1. **Initialization**:
    - Start with a random room that has connections
    - **Clone it** to avoid modifying the template
-   - Mark it as used (no duplicates allowed)
    - Place it at the origin (0, 0)
    - Spawn multiple walkers at the first room
 
@@ -404,7 +403,7 @@ X X X
 ## Configuration Parameters
 
 ### DungeonGenerator
-- `room_templates`: Array of MetaRoom resources to use (each can only be placed once)
+- `room_templates`: Array of MetaRoom resources to use
 - `num_walkers`: Number of simultaneous walkers (default: 3)
 - `max_rooms_per_walker`: Max rooms each walker can place before dying (default: 20)
 - `max_placement_attempts_per_room`: Max attempts to place each room (default: 10)

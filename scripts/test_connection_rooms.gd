@@ -10,6 +10,7 @@ func _ready() -> void:
 	test_is_connection_room()
 	test_get_required_connection_points()
 	test_connection_room_placement()
+	test_starting_room_is_normal()
 	
 	print()
 	print("=== All Tests Complete ===")
@@ -179,6 +180,57 @@ func test_connection_room_placement() -> void:
 	var can_fulfill_partial = generator._can_fulfill_required_connections(l_room, Vector2i(3, 0))
 	assert(not can_fulfill_partial, "L-room should NOT be placeable - only one required connection satisfied")
 	print("  ✓ _can_fulfill_required_connections() correctly requires ALL connections to be satisfied")
+	
+	print()
+
+
+## Test 4: Starting room is always a normal room
+func test_starting_room_is_normal() -> void:
+	print("Test 4: Starting room is never a connection room")
+	
+	# Create a generator with both normal and connection room templates
+	var generator = DungeonGenerator.new()
+	
+	# Create a normal room
+	var normal_room = MetaRoom.new()
+	normal_room.width = 3
+	normal_room.height = 3
+	normal_room._initialize_cells()
+	normal_room.room_name = "Normal Room"
+	normal_room.get_cell(1, 0).connection_up = true
+	normal_room.get_cell(2, 1).connection_right = true
+	normal_room.get_cell(1, 2).connection_bottom = true
+	normal_room.get_cell(0, 1).connection_left = true
+	
+	# Create a connection room (L-room)
+	var l_room = MetaRoom.new()
+	l_room.width = 3
+	l_room.height = 3
+	l_room._initialize_cells()
+	l_room.room_name = "L-Room (Connection)"
+	l_room.get_cell(2, 1).connection_right = true
+	l_room.get_cell(2, 1).connection_required = true
+	l_room.get_cell(1, 2).connection_bottom = true
+	l_room.get_cell(1, 2).connection_required = true
+	
+	# Set templates
+	generator.room_templates = [normal_room, l_room]
+	
+	# Test _get_random_room_with_connections multiple times
+	print("  Testing _get_random_room_with_connections() 20 times...")
+	for i in range(20):
+		var start_room = generator._get_random_room_with_connections()
+		assert(start_room != null, "Should return a valid room")
+		assert(not start_room.is_connection_room(), "Starting room should NEVER be a connection room")
+		assert(start_room.room_name == "Normal Room", "Starting room should be the normal room")
+	
+	print("  ✓ Starting room is always a normal room (tested 20 times)")
+	
+	# Test with only connection rooms (should return null)
+	generator.room_templates = [l_room]
+	var no_valid_start = generator._get_random_room_with_connections()
+	assert(no_valid_start == null, "Should return null when only connection rooms are available")
+	print("  ✓ Returns null when no normal rooms with connections are available")
 	
 	print()
 

@@ -115,4 +115,4 @@ width = 5
 height = 5
 cells = Array[ExtResource("2_meta_cell")]([SubResource("Resource_blocked_00"), SubResource("Resource_blocked_01"), SubResource("Resource_door_up"), SubResource("Resource_blocked_03"), SubResource("Resource_blocked_04"), SubResource("Resource_blocked_10"), SubResource("Resource_floor_11"), SubResource("Resource_floor_12"), SubResource("Resource_floor_13"), SubResource("Resource_blocked_14"), SubResource("Resource_door_left"), SubResource("Resource_floor_21"), SubResource("Resource_floor_22"), SubResource("Resource_floor_23"), SubResource("Resource_door_right"), SubResource("Resource_blocked_30"), SubResource("Resource_floor_31"), SubResource("Resource_floor_32"), SubResource("Resource_floor_33"), SubResource("Resource_blocked_34"), SubResource("Resource_blocked_40"), SubResource("Resource_blocked_41"), SubResource("Resource_blocked_42"), SubResource("Resource_blocked_43"), SubResource("Resource_blocked_44")])
 room_name = "T-Room Test"
-required_connections = Array[int]([0, 3, 1])
+required_connections = Array[int]([0, 3, 1])  # UP=0, RIGHT=1, LEFT=3 (MetaCell.Direction enum)

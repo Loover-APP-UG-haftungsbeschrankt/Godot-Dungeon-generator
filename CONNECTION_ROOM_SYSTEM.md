@@ -33,13 +33,15 @@ Examples:
 - Only places the room if all required connections can be fulfilled
 
 #### New `_can_fulfill_required_connections(room, position) -> bool`
-- Validates that all required connections can be satisfied
+- Validates that all required connections are already satisfied
 - For each required connection:
   - Checks the adjacent position in the connection direction
+  - If no room exists there:
+    - Returns `false` (required connection cannot be fulfilled)
   - If a room already exists there:
     - Returns `false` if it's a connection room (cannot satisfy requirement)
-    - Returns `true` if it's a normal room (satisfies requirement)
-  - If no room exists yet, considers the space available (returns `true`)
+    - Continues checking if it's a normal room (satisfies requirement)
+- Returns `true` only if ALL required connections have normal rooms adjacent
 
 ## Key Rules
 
@@ -55,8 +57,17 @@ Examples:
 1. Walker tries to place an L-corridor (connection room)
 2. System checks: is_connection_room() → true
 3. System validates: _can_fulfill_required_connections()
-   - Checks RIGHT required connection → Adjacent space is empty (OK)
-   - Checks BOTTOM required connection → Adjacent space has normal room (OK)
+   - Checks RIGHT required connection → Adjacent space is empty ✗
+4. Result: Requirement not met → L-corridor is NOT placed
+5. Walker tries different position/rotation
+```
+
+```
+1. Walker tries to place an L-corridor (connection room) at a different position
+2. System checks: is_connection_room() → true
+3. System validates: _can_fulfill_required_connections()
+   - Checks RIGHT required connection → Adjacent has normal room ✓
+   - Checks BOTTOM required connection → Adjacent has normal room ✓
 4. Result: All requirements met → L-corridor is placed
 ```
 

@@ -425,7 +425,7 @@ func _can_place_room(room: MetaRoom, position: Vector2i) -> bool:
 
 
 ## Validates that all required connections of a connection room can be fulfilled
-## Returns true if all required connections have available space for normal rooms
+## Returns true only if ALL required connections are already connected to normal rooms
 func _can_fulfill_required_connections(room: MetaRoom, position: Vector2i) -> bool:
 	var required_connections = room.get_required_connection_points()
 	
@@ -434,20 +434,20 @@ func _can_fulfill_required_connections(room: MetaRoom, position: Vector2i) -> bo
 		var conn_world_pos = position + Vector2i(conn_point.x, conn_point.y)
 		var adjacent_pos = conn_world_pos + _get_direction_offset(conn_point.direction)
 		
-		# If there's already a room at the adjacent position
-		if occupied_cells.has(adjacent_pos):
-			var existing_placement = occupied_cells[adjacent_pos]
-			
-			# Check if the existing room is a connection room
-			# Connection rooms cannot satisfy required connections
-			if existing_placement.room.is_connection_room():
-				return false
-			
-			# Normal room exists, which is fine - the connection will be satisfied
-			continue
+		# Required connections MUST have a normal room already placed at the adjacent position
+		if not occupied_cells.has(adjacent_pos):
+			# No room exists - required connection cannot be fulfilled
+			return false
 		
-		# No room exists yet - that's okay, a normal room can be placed there later
-		# The space is available for fulfilling this required connection
+		var existing_placement = occupied_cells[adjacent_pos]
+		
+		# Check if the existing room is a connection room
+		# Connection rooms cannot satisfy required connections
+		if existing_placement.room.is_connection_room():
+			return false
+		
+		# Normal room exists, which is fine - the connection will be satisfied
+		# Continue checking other required connections
 	
 	return true
 

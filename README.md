@@ -156,14 +156,16 @@ Examples:
    - `MetaRoom.get_required_connection_points()` returns only the required connection points
 
 3. **Validation During Placement**:
-   - When placing a connection room, the generator validates that ALL required connections can be fulfilled
-   - Only **normal rooms** (non-connection rooms) are allowed to connect to required connection points
-   - If any required connection cannot be satisfied, the connection room is not placed
+   - When placing a connection room, the generator validates that ALL required connections are **already fulfilled**
+   - Only **normal rooms** (non-connection rooms) that are already placed can satisfy required connection points
+   - If any required connection does not have a normal room adjacent, the connection room is not placed
+   - Empty spaces at required connections are not allowed - the connection must already exist
    - The generator tries other positions/rotations until all requirements are met
 
 4. **Benefits**:
    - Prevents "floating" corridor pieces that don't connect properly
-   - Ensures L/T/I shaped rooms form valid pathways
+   - Ensures L/T/I shaped rooms form valid pathways only when properly connected
+   - Guarantees all required connections are satisfied before placement
    - Normal rooms can still connect to connection rooms on non-required connections
    - Creates more structurally sound dungeons
 
@@ -193,9 +195,10 @@ func get_required_connection_points() -> Array[ConnectionPoint]
 
 # In DungeonGenerator.gd
 func _can_fulfill_required_connections(room: MetaRoom, position: Vector2i) -> bool
-	# Validates all required connections can be satisfied
-	# Checks that no connection room would block required connections
-	# Returns true only if all requirements can be met
+	# Validates all required connections are already satisfied
+	# For each required connection, checks that a normal room is already placed
+	# Returns false if any required connection has no room or has a connection room
+	# Returns true only if ALL required connections have normal rooms adjacent
 ```
 
 This validation happens automatically during room placement, ensuring structurally valid dungeons without manual intervention.

@@ -18,6 +18,11 @@ extends Resource
 ## Name identifier for this room template
 @export var room_name: String = "Room"
 
+## Array of directions that MUST be connected to other rooms for valid placement
+## Example: A T-room with 3 connections should have [UP, LEFT, RIGHT]
+## Empty array means no required connections (all placements valid)
+@export var required_connections: Array[MetaCell.Direction] = []
+
 
 func _init() -> void:
 	# Initialize with empty cells if needed

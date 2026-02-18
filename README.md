@@ -6,6 +6,8 @@ A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algori
 
 **→ [INDEX.md](INDEX.md) - Complete documentation roadmap with reading paths and quick start guides**
 
+**→ [ATOMIC_PLACEMENT_IMPLEMENTATION.md](ATOMIC_PLACEMENT_IMPLEMENTATION.md) - Implementation guide for atomic multi-room placement**
+
 Comprehensive documentation for understanding and implementing atomic multi-room placement:
 
 - **[README_EXPLORATION_SUMMARY.md](README_EXPLORATION_SUMMARY.md)** - Start here! Overview of the exploration and links to all documentation

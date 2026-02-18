@@ -312,11 +312,17 @@ func _walker_try_place_room(walker: Walker) -> bool:
 				var placement = _try_connect_room(walker.current_room, conn_point, rotated_room, rotation, template)
 				
 				if placement != null:
-					_place_room(placement)
-					walker.move_to_room(placement)
-					# Emit signal for visualization
-					room_placed.emit(placement, walker)
-					return true
+					# Check if required connections would be satisfied
+					var satisfied = _get_satisfied_connections(placement.position, placement.room)
+					
+					# Validate that all required connections are satisfied
+					if _validate_required_connections(satisfied, placement.room.required_connections):
+						_place_room(placement)
+						walker.move_to_room(placement)
+						# Emit signal for visualization
+						room_placed.emit(placement, walker)
+						return true
+					# If validation fails, continue to next rotation/template
 	
 	return false
 
@@ -429,6 +435,108 @@ func _try_connect_room(
 			return PlacedRoom.new(to_room, target_pos, rotation, original_template)
 	
 	return null
+
+
+## Helper function to check if a cell is walkable (FLOOR or DOOR)
+func _is_walkable_cell(cell: MetaCell) -> bool:
+	if cell == null:
+		return false
+	return cell.cell_type == MetaCell.CellType.FLOOR or cell.cell_type == MetaCell.CellType.DOOR
+
+
+## Gets which connections would be satisfied if the room was placed at position
+## A connection is satisfied if there's an adjacent FLOOR or DOOR cell in that direction
+## Returns an array of Direction enums
+func _get_satisfied_connections(position: Vector2i, meta_room: MetaRoom) -> Array[MetaCell.Direction]:
+	var satisfied: Array[MetaCell.Direction] = []
+	
+	# Check all 4 directions
+	var directions = [
+		MetaCell.Direction.UP,
+		MetaCell.Direction.RIGHT,
+		MetaCell.Direction.BOTTOM,
+		MetaCell.Direction.LEFT
+	]
+	
+	for direction in directions:
+		# Get the offset for this direction
+		var offset: Vector2i
+		match direction:
+			MetaCell.Direction.UP:
+				offset = Vector2i(0, -1)
+			MetaCell.Direction.RIGHT:
+				offset = Vector2i(1, 0)
+			MetaCell.Direction.BOTTOM:
+				offset = Vector2i(0, 1)
+			MetaCell.Direction.LEFT:
+				offset = Vector2i(-1, 0)
+		
+		# Check if any cell in the room has a connection in this direction
+		# and if there's an adjacent FLOOR or DOOR cell at that position
+		var connection_found = false
+		for y in range(meta_room.height):
+			if connection_found:
+				break
+			for x in range(meta_room.width):
+				var cell = meta_room.get_cell(x, y)
+				if cell == null:
+					continue
+				
+				# Check if this cell has a connection in the direction we're checking
+				if not cell.has_connection(direction):
+					continue
+				
+				# Check if this cell is on the appropriate edge for this direction
+				var is_on_edge = false
+				match direction:
+					MetaCell.Direction.UP:
+						is_on_edge = (y == 0)
+					MetaCell.Direction.RIGHT:
+						is_on_edge = (x == meta_room.width - 1)
+					MetaCell.Direction.BOTTOM:
+						is_on_edge = (y == meta_room.height - 1)
+					MetaCell.Direction.LEFT:
+						is_on_edge = (x == 0)
+				
+				if not is_on_edge:
+					continue
+				
+				# Calculate the world position of this connection cell
+				var cell_world_pos = position + Vector2i(x, y)
+				
+				# Calculate the adjacent cell position in the direction of the connection
+				var adjacent_pos = cell_world_pos + offset
+				
+				# Check if there's an occupied cell at the adjacent position
+				if occupied_cells.has(adjacent_pos):
+					var adjacent_placement = occupied_cells[adjacent_pos]
+					var adjacent_cell = _get_cell_at_world_pos(adjacent_placement, adjacent_pos)
+					
+					# Connection is satisfied if adjacent cell is walkable (FLOOR or DOOR)
+					if _is_walkable_cell(adjacent_cell):
+						if not satisfied.has(direction):
+							satisfied.append(direction)
+						# Found at least one connection in this direction
+						connection_found = true
+						break
+	
+	return satisfied
+
+
+## Validates that all required connections are satisfied
+## Returns true if ALL required connections are in the satisfied array
+## Returns true if required array is empty (no requirements)
+func _validate_required_connections(satisfied: Array[MetaCell.Direction], required: Array[MetaCell.Direction]) -> bool:
+	# If no required connections, placement is always valid
+	if required.is_empty():
+		return true
+	
+	# Check that ALL required connections are satisfied
+	for req_dir in required:
+		if not satisfied.has(req_dir):
+			return false  # Missing a required connection
+	
+	return true
 
 
 ## Checks if a room can be placed at the given position without overlapping

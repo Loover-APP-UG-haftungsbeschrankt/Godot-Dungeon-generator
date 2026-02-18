@@ -469,9 +469,9 @@ The generator is fast and reliable:
 
 ## Known Limitations
 
-1. **Template Reuse**: The same room template can be placed multiple times in a dungeon, just not consecutively by the same walker. This is by design to allow varied dungeons with limited templates.
+1. **Consecutive Duplicate Prevention Only**: The generator prevents the same template from being placed twice in a row by the same walker, but the same template can appear multiple times in different parts of the dungeon. This is by design to allow creating varied dungeons even with a limited template pool.
 
-2. **No Path Validation**: The generator doesn't verify that all rooms are reachable from the starting room. Isolated room clusters can occur in rare cases.
+2. **No Path Validation**: The generator doesn't verify that all rooms are reachable from the starting room. Isolated room clusters can occur in rare cases with very low compactness bias or incompatible room layouts. Consider implementing flood-fill validation if your game requires guaranteed connectivity (see "Extending the System" section).
 
 3. **No Dead-End Control**: Cannot specify desired number or placement of dead-end rooms.
 
@@ -530,12 +530,24 @@ The generator is fast and reliable:
    generator.place_room_at(boss_room, Vector2i(0, 0))
    ```
 
-3. **Path Validation**: Ensure all rooms are reachable
+3. **Path Validation**: Ensure all rooms are reachable (optional but recommended for games requiring guaranteed connectivity)
    ```gdscript
-   # Implement flood-fill after generation
-   func validate_all_reachable() -> bool:
-       # Start from first room, flood-fill through connections
-       # Return false if any rooms are unreachable
+   # Implement flood-fill after generation to verify connectivity
+   func validate_all_reachable(generator: DungeonGenerator) -> bool:
+       if generator.placed_rooms.is_empty():
+           return false
+       
+       var visited = {}
+       var queue = [generator.placed_rooms[0]]
+       visited[generator.placed_rooms[0]] = true
+       
+       while not queue.is_empty():
+           var current = queue.pop_front()
+           # Find connected neighbors through doors
+           # Add unvisited neighbors to queue and mark as visited
+           # (Implementation details depend on how you track connections)
+       
+       return visited.size() == generator.placed_rooms.size()
    ```
 
 4. **Dead End Tracking**: Post-process to identify and optionally remove dead ends

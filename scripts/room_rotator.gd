@@ -34,6 +34,12 @@ static func rotate_room(room: MetaRoom, rotation: Rotation) -> MetaRoom:
 	for i in range(rotated_room.width * rotated_room.height):
 		rotated_room.cells.append(null)
 	
+	# Copy and rotate required_connections
+	rotated_room.required_connections.clear()
+	for direction in room.required_connections:
+		var rotated_dir = rotate_direction(direction, rotation)
+		rotated_room.required_connections.append(rotated_dir)
+	
 	# Rotate each cell
 	for y in range(room.height):
 		for x in range(room.width):

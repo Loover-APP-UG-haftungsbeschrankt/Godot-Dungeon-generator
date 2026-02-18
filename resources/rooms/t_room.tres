@@ -91,3 +91,4 @@ width = 5
 height = 4
 cells = Array[ExtResource("2_meta_cell")]([SubResource("Resource_6kso3"), SubResource("Resource_rc72i"), SubResource("Resource_mu0ri"), SubResource("Resource_wl3sn"), SubResource("Resource_1ofnf"), SubResource("Resource_sebjy"), SubResource("Resource_sx8dm"), SubResource("Resource_upggu"), SubResource("Resource_ls7xv"), SubResource("Resource_ijog1"), SubResource("Resource_8lrnb"), SubResource("Resource_0wsfo"), SubResource("Resource_4mse1"), SubResource("Resource_dtdja"), SubResource("Resource_5adxe"), SubResource("Resource_3qw5l"), SubResource("Resource_c6x7d"), SubResource("Resource_mhuxi"), SubResource("Resource_0b0wn"), SubResource("Resource_w1dvn")])
 room_name = "T-Room"
+required_connections = Array[int]([3, 1, 2])  # LEFT=3, RIGHT=1, BOTTOM=2 (MetaCell.Direction enum)

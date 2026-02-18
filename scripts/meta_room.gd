@@ -118,6 +118,9 @@ func clone() -> MetaRoom:
 	new_room.room_name = room_name
 	new_room.cells.clear()
 	
+	# Copy required_connections
+	new_room.required_connections = required_connections.duplicate()
+	
 	for cell in cells:
 		if cell != null:
 			new_room.cells.append(cell.clone())

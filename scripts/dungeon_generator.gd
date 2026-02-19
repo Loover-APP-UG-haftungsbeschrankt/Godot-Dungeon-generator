@@ -481,9 +481,24 @@ func _can_fulfill_required_connections(room: MetaRoom, position: Vector2i, conne
 				print("    ✗ REJECTED: Existing room is a connection room")
 			return false
 		
-		# Normal room exists, which is fine - the connection will be satisfied
+		# Check if the adjacent cell has a matching connection pointing back
+		# This is CRITICAL: the adjacent cell must have a connection in the opposite direction
+		var adjacent_cell = _get_cell_at_world_pos(existing_placement, adjacent_pos)
+		if adjacent_cell == null:
+			if debug_connection_rooms and is_debug_room:
+				print("    ✗ REJECTED: No cell at adjacent position")
+			return false
+		
+		# The adjacent cell must have a connection pointing back toward us
+		var required_opposite_direction = MetaCell.opposite_direction(conn_point.direction)
+		if not adjacent_cell.has_connection(required_opposite_direction):
+			if debug_connection_rooms and is_debug_room:
+				print("    ✗ REJECTED: Adjacent cell has no matching connection (needs ", required_opposite_direction, ")")
+			return false
+		
+		# Normal room with matching connection exists - the connection will be satisfied
 		if debug_connection_rooms and is_debug_room:
-			print("    ✓ OK: Normal room found")
+			print("    ✓ OK: Normal room with matching connection found")
 		# Continue checking other required connections
 	
 	if debug_connection_rooms and is_debug_room:

@@ -18,8 +18,8 @@ print("\n=== All Tests Completed ===")
 quit()
 
 func test_connection_rotation():
-print("Test 1: Connection Direction Rotation")
-print("--------------------------------------")
+	print("Test 1: Connection Direction Rotation")
+	print("--------------------------------------")
 
 var cell = MetaCell.new()
 cell.connection_up = true
@@ -70,8 +70,8 @@ var pass_270 = (cell_270.connection_up and !cell_270.connection_right and
 print("270° rotation: %s\n" % ("PASS" if pass_270 else "FAIL"))
 
 func test_position_rotation():
-print("Test 2: Position Rotation in 3x3 Grid")
-print("--------------------------------------")
+	print("Test 2: Position Rotation in 3x3 Grid")
+	print("--------------------------------------")
 
 # Test position (1, 0) - top middle
 var pos = Vector2i(1, 0)

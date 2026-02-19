@@ -590,7 +590,7 @@ func _fill_required_connections_atomic(connector_placement: PlacedRoom, walker: 
 			continue
 		
 		# Try to place a room at this connection
-		# We need to place EITHER a room OR a non-connector room
+		# Preferably a non-connector room to avoid nested atomicity issues
 		var placed = _try_place_room_at_connection(connector_placement, req_conn, walker, true)
 		
 		if placed == null:
@@ -623,6 +623,7 @@ func _fill_required_connections_atomic(connector_placement: PlacedRoom, walker: 
 
 
 ## Rolls back an atomic placement operation
+## The placements array is kept for potential future use (e.g., logging or advanced rollback)
 func _rollback_atomic_placement(placements: Array[PlacedRoom], reservations: Array[Vector2i]) -> void:
 	# Note: We don't need to undo anything because we never actually placed the rooms
 	# The reservations just need to be cleared

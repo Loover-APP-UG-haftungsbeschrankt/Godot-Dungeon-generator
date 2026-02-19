@@ -271,10 +271,66 @@ func _walker_try_place_room(walker: Walker) -> bool:
 				var placement = _try_connect_room(walker.current_room, conn_point, rotated_room, rotation, template)
 				
 				if placement != null:
+					# Check if this room has required connections that need to be satisfied
+					var required_conns = rotated_room.get_required_connection_points()
+					
+					if required_conns.is_empty():
+						# No required connections – place normally
+						_place_room(placement)
+						walker.move_to_room(placement)
+						room_placed.emit(placement, walker)
+						return true
+					
+					# Determine which required connection is the incoming one (already satisfied)
+					var incoming_dir = MetaCell.opposite_direction(conn_point.direction)
+					
+					# Collect required connections that still need a room (excluding incoming)
+					var unsatisfied: Array[MetaRoom.ConnectionPoint] = []
+					for req_conn in required_conns:
+						if req_conn.direction == incoming_dir:
+							continue
+						# Also skip if adjacent position is already occupied by a real room
+						var conn_world_pos = placement.get_cell_world_pos(req_conn.x, req_conn.y)
+						var adjacent_pos = conn_world_pos + _get_direction_offset(req_conn.direction)
+						if occupied_cells.has(adjacent_pos):
+							continue
+						unsatisfied.append(req_conn)
+					
+					if unsatisfied.is_empty():
+						# All required connections already satisfied
+						_place_room(placement)
+						walker.move_to_room(placement)
+						room_placed.emit(placement, walker)
+						return true
+					
+					# Simulate placing the main room to check feasibility of additional rooms
+					var saved_occupied = occupied_cells.duplicate()
+					_simulate_occupied(placement)
+					
+					var additional_rooms: Array[PlacedRoom] = []
+					var all_satisfied := true
+					
+					for req_conn in unsatisfied:
+						var found = _find_room_for_required_connection(placement, req_conn)
+						if found == null:
+							all_satisfied = false
+							break
+						additional_rooms.append(found)
+						_simulate_occupied(found)
+					
+					# Always restore occupied_cells after simulation
+					occupied_cells = saved_occupied
+					
+					if not all_satisfied:
+						continue  # Try next rotation / template
+					
+					# Commit: place main room and all additional rooms
 					_place_room(placement)
 					walker.move_to_room(placement)
-					# Emit signal for visualization
 					room_placed.emit(placement, walker)
+					for additional in additional_rooms:
+						_place_room(additional)
+						room_placed.emit(additional, walker)
 					return true
 	
 	return false
@@ -502,6 +558,36 @@ func _merge_overlapping_cells(existing_cell: MetaCell, new_cell: MetaCell, local
 		new_cell.cell_type = MetaCell.CellType.BLOCKED
 	
 	return connected_direction
+
+
+## Adds room cells to occupied_cells without adding to placed_rooms and without merging.
+## Used for feasibility simulation before committing placement.
+## Mimics _place_room's behavior: does NOT overwrite existing entries (blocked-blocked overlap).
+func _simulate_occupied(placement: PlacedRoom) -> void:
+	for y in range(placement.room.height):
+		for x in range(placement.room.width):
+			var cell = placement.room.get_cell(x, y)
+			if cell == null:
+				continue
+			var world_pos = placement.get_cell_world_pos(x, y)
+			if not occupied_cells.has(world_pos):
+				occupied_cells[world_pos] = placement
+
+
+## Finds any room template+rotation that can connect to the given required connection point.
+## Returns null if no valid room is found.
+func _find_room_for_required_connection(
+	from_placement: PlacedRoom,
+	req_conn: MetaRoom.ConnectionPoint
+) -> PlacedRoom:
+	var rotations = RoomRotator.get_all_rotations()
+	for template in room_templates:
+		for rotation in rotations:
+			var rotated = RoomRotator.rotate_room(template, rotation)
+			var candidate = _try_connect_room(from_placement, req_conn, rotated, rotation, template)
+			if candidate != null:
+				return candidate
+	return null
 
 
 ## Gets the offset vector for a direction

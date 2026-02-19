@@ -100,6 +100,16 @@ func get_connection_points() -> Array[ConnectionPoint]:
 	return connections
 
 
+## Returns only the connection points where the cell has connection_required = true
+func get_required_connection_points() -> Array[ConnectionPoint]:
+	var required: Array[ConnectionPoint] = []
+	for conn in get_connection_points():
+		var cell = get_cell(conn.x, conn.y)
+		if cell != null and cell.connection_required:
+			required.append(conn)
+	return required
+
+
 ## Returns true if this room has at least one connection point
 func has_connection_points() -> bool:
 	return not get_connection_points().is_empty()

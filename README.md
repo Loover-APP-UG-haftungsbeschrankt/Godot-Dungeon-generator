@@ -68,9 +68,11 @@ A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algori
 Each cell in a room has:
 - **Type**: BLOCKED, FLOOR, or DOOR
 - **Connections**: UP, RIGHT, BOTTOM, LEFT flags indicating where this cell can connect to adjacent rooms
-- **Connection Required Flag**: Optional boolean flag to mark a cell's connection as important
-  - Used for visual editor hints and potential future features
-  - Not currently enforced during generation
+- **Connection Required Flag**: Boolean flag to mark a cell's connection as mandatory
+  - When a room has required connections, the generator ensures all of them (except the incoming one) are satisfied
+  - If not all required connections can be fulfilled, the room is not placed
+  - Additional rooms are automatically placed to satisfy required connections
+  - Used for rooms like T-rooms or L-corridors where all exits must connect
 
 ### 2. MetaRoom
 A room template consisting of:
@@ -164,11 +166,17 @@ The generator uses a **multi-walker room placement algorithm** that creates more
    - Pick random connection from walker's current room
    - Try random template and rotation
    - Check if room can be placed (allowing blocked cell overlaps)
+   - **Required Connection Validation**: If the room has required connections:
+     - Identifies which connections must be satisfied (all except the incoming one)
+     - Simulates placement to check if additional rooms can fulfill all requirements
+     - Only places the room if all required connections can be satisfied
+     - Automatically places additional rooms to fulfill requirements
    - If valid, **place the cloned room**, merge overlapping connections
    - Walker moves to the new room
 
 #### Key Features:
 
+- **Required Connection Validation**: Ensures rooms with mandatory connections (like T-rooms) are fully connected **(NEW!)**
 - **Consecutive Duplicate Prevention**: Same template won't be placed twice in a row by the same walker
 - **Multiple Simultaneous Walkers**: 3+ walkers work in parallel for varied layouts
 - **Cell-Count Based**: Stops at target cell count, not room count (more precise control)

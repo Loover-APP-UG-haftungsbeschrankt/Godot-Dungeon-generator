@@ -304,19 +304,16 @@ func _walker_try_place_room(walker: Walker) -> bool:
 						return true
 					
 					# Simulate placing the main room to check feasibility of additional rooms
-					var saved_occupied = occupied_cells.duplicate()
+					var saved_occupied = occupied_cells.duplicate(true)
 					_simulate_occupied(placement)
 					
 					var additional_rooms: Array[PlacedRoom] = []
 					var all_satisfied := true
 					
-					for req_conn in unsatisfied:
-						var found = _find_room_for_required_connection(placement, req_conn)
-						if found == null:
-							all_satisfied = false
-							break
-						additional_rooms.append(found)
-						_simulate_occupied(found)
+					# Recursively validate required connections (with depth limit to prevent infinite loops)
+					all_satisfied = _validate_required_connections_recursive(
+						placement, unsatisfied, additional_rooms, 0, 3
+					)
 					
 					# Always restore occupied_cells after simulation
 					occupied_cells = saved_occupied
@@ -572,6 +569,58 @@ func _simulate_occupied(placement: PlacedRoom) -> void:
 			var world_pos = placement.get_cell_world_pos(x, y)
 			if not occupied_cells.has(world_pos):
 				occupied_cells[world_pos] = placement
+
+
+## Recursively validates required connections for a room and its dependencies.
+## Returns true if all required connections can be satisfied, false otherwise.
+## Populates additional_rooms with all rooms needed to satisfy requirements.
+func _validate_required_connections_recursive(
+	placement: PlacedRoom,
+	unsatisfied: Array[MetaRoom.ConnectionPoint],
+	additional_rooms: Array[PlacedRoom],
+	depth: int,
+	max_depth: int
+) -> bool:
+	# Prevent infinite recursion
+	if depth >= max_depth:
+		return false
+	
+	# Try to satisfy each unsatisfied connection
+	for req_conn in unsatisfied:
+		var found = _find_room_for_required_connection(placement, req_conn)
+		if found == null:
+			return false
+		
+		additional_rooms.append(found)
+		_simulate_occupied(found)
+		
+		# Check if the newly placed room also has required connections
+		var new_required = found.room.get_required_connection_points()
+		if not new_required.is_empty():
+			# Find which connection is the incoming one (from placement to found)
+			var incoming_dir = MetaCell.opposite_direction(req_conn.direction)
+			
+			# Collect unsatisfied connections for the new room
+			var new_unsatisfied: Array[MetaRoom.ConnectionPoint] = []
+			for new_req_conn in new_required:
+				if new_req_conn.direction == incoming_dir:
+					continue
+				# Skip if already occupied
+				var conn_world_pos = found.get_cell_world_pos(new_req_conn.x, new_req_conn.y)
+				var adjacent_pos = conn_world_pos + _get_direction_offset(new_req_conn.direction)
+				if occupied_cells.has(adjacent_pos):
+					continue
+				new_unsatisfied.append(new_req_conn)
+			
+			# Recursively validate the new room's requirements
+			if not new_unsatisfied.is_empty():
+				var success = _validate_required_connections_recursive(
+					found, new_unsatisfied, additional_rooms, depth + 1, max_depth
+				)
+				if not success:
+					return false
+	
+	return true
 
 
 ## Finds any room template+rotation that can connect to the given required connection point.

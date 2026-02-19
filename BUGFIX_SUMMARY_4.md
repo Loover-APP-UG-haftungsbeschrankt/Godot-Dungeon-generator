@@ -1,7 +1,7 @@
 # Bug Fix #4: Edge Checks Breaking Rotated Rooms
 
 ## Problem Report
-User reported: "Stil not seeing one T-Room. Also the L Rooms haven't all 2 rooms connected"
+User reported: "Still not seeing one T-Room. Also the L Rooms haven't all 2 rooms connected"
 
 After three previous fixes, the issue persisted. Turns out there was a FUNDAMENTAL bug in how connections are detected after rotation!
 

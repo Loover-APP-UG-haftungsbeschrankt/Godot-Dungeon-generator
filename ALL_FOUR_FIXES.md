@@ -9,10 +9,10 @@
 "Still there are L-Rooms that have only on Room. T-Rooms I don't see at all"
 
 ### Issue #3:
-"Stil not placing T-Meta-Rooms."
+"Still not placing T-Meta-Rooms."
 
 ### Issue #4:
-"Stil not seeing one T-Room. Also the L Rooms haven't all 2 rooms connected"
+"Still not seeing one T-Room. Also the L Rooms haven't all 2 rooms connected"
 
 ## All Four Root Causes
 

@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="MetaRoom" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/meta_room.gd" id="1_connector"]
+[ext_resource type="Script" path="res://scripts/meta_cell.gd" id="2_cell"]
+
+[sub_resource type="Resource" id="cell_left"]
+script = ExtResource("2_cell")
+cell_type = 2
+connection_up = false
+connection_right = true
+connection_bottom = false
+connection_left = true
+connection_required = true
+
+[sub_resource type="Resource" id="cell_middle"]
+script = ExtResource("2_cell")
+cell_type = 1
+connection_up = false
+connection_right = false
+connection_bottom = false
+connection_left = false
+connection_required = false
+
+[sub_resource type="Resource" id="cell_right"]
+script = ExtResource("2_cell")
+cell_type = 2
+connection_up = false
+connection_right = true
+connection_bottom = false
+connection_left = true
+connection_required = true
+
+[resource]
+script = ExtResource("1_connector")
+width = 3
+height = 1
+cells = Array[ExtResource("2_cell")]([SubResource("cell_left"), SubResource("cell_middle"), SubResource("cell_right")])
+room_name = "Corridor_Connector_Required"

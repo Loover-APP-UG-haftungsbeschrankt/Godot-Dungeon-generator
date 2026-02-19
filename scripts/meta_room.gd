@@ -63,15 +63,18 @@ class ConnectionPoint:
 	var x: int
 	var y: int
 	var direction: MetaCell.Direction
+	var is_required: bool  ## Whether this connection is required (from connection_required flag)
 	
-	func _init(p_x: int, p_y: int, p_direction: MetaCell.Direction):
+	func _init(p_x: int, p_y: int, p_direction: MetaCell.Direction, p_is_required: bool = false):
 		x = p_x
 		y = p_y
 		direction = p_direction
+		is_required = p_is_required
 
 
 ## Returns all available connection points in this room
 ## A connection point is a cell that has a connection leading outside the room
+## Now includes the connection_required flag for each connection
 func get_connection_points() -> Array[ConnectionPoint]:
 	var connections: Array[ConnectionPoint] = []
 	
@@ -83,19 +86,19 @@ func get_connection_points() -> Array[ConnectionPoint]:
 			
 			# Check UP connection (y = 0)
 			if y == 0 and cell.connection_up:
-				connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.UP))
+				connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.UP, cell.connection_required))
 			
 			# Check RIGHT connection (x = width - 1)
 			if x == width - 1 and cell.connection_right:
-				connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.RIGHT))
+				connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.RIGHT, cell.connection_required))
 			
 			# Check BOTTOM connection (y = height - 1)
 			if y == height - 1 and cell.connection_bottom:
-				connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.BOTTOM))
+				connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.BOTTOM, cell.connection_required))
 			
 			# Check LEFT connection (x = 0)
 			if x == 0 and cell.connection_left:
-				connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.LEFT))
+				connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.LEFT, cell.connection_required))
 	
 	return connections
 
@@ -103,6 +106,31 @@ func get_connection_points() -> Array[ConnectionPoint]:
 ## Returns true if this room has at least one connection point
 func has_connection_points() -> bool:
 	return not get_connection_points().is_empty()
+
+
+## Returns all required connection points in this room
+## These are connections that MUST be filled when placing this room
+func get_required_connection_points() -> Array[ConnectionPoint]:
+	var required_connections: Array[ConnectionPoint] = []
+	var all_connections = get_connection_points()
+	
+	for conn in all_connections:
+		if conn.is_required:
+			required_connections.append(conn)
+	
+	return required_connections
+
+
+## Returns true if this room has any required connections
+## Rooms with required connections should be treated as connectors
+func has_required_connections() -> bool:
+	return not get_required_connection_points().is_empty()
+
+
+## Returns true if this room is a connector piece
+## A connector is a room with at least one required connection
+func is_connector_piece() -> bool:
+	return has_required_connections()
 
 
 ## Creates a deep copy of this room

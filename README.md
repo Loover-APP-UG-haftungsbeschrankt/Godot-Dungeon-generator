@@ -68,24 +68,44 @@ A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algori
 Each cell in a room has:
 - **Type**: BLOCKED, FLOOR, or DOOR
 - **Connections**: UP, RIGHT, BOTTOM, LEFT flags indicating where this cell can connect to adjacent rooms
-- **Connection Required Flag**: Optional boolean flag to mark a cell's connection as important
-  - Used for visual editor hints and potential future features
-  - Not currently enforced during generation
+- **Connection Required Flag**: Boolean flag that marks a connection as mandatory
+  - When set to `true`, the cell's connection MUST be filled when placing the room
+  - Used to create connector pieces (hallways, critical passages)
+  - **Enforced during generation** through atomic placement
+  - Prevents walkers from leaving required connections unfilled
 
 ### 2. MetaRoom
 A room template consisting of:
 - Width and height dimensions
 - Grid of MetaCells
 - Connection points (cells on edges with connections)
+- **Required connection detection**: Automatically identifies if room is a connector piece
 - Optional room name for identification
 
 ### 3. Room Rotation
 The `RoomRotator` class can rotate rooms by 0°, 90°, 180°, or 270°:
 - Rotates the cell grid positions
 - Rotates connection directions appropriately
+- **Preserves `connection_required` flags** during rotation
 - Returns a new rotated MetaRoom instance
 
-### 4. Blocked Cell Overlap System
+### 4. Connector Rooms & Atomic Placement
+
+**Connector rooms** are rooms with at least one required connection. These are treated specially:
+
+- **Atomic Placement**: When a walker places a connector room, ALL required connections must be filled immediately
+- **Position Reservation**: Connector positions are reserved during atomic operations to prevent race conditions
+- **Transactional**: If any required connection cannot be filled, the entire placement is rolled back
+- **No Orphaned Connections**: Guarantees that required connections are never left unfilled
+
+**Use cases for connector rooms:**
+- Critical hallways that must connect both ends
+- Bridge pieces that link different dungeon areas
+- Mandatory passages that shouldn't be dead-ends
+
+Example: A straight corridor with both ends marked as required will always connect two rooms, never be a dead-end.
+
+### 5. Blocked Cell Overlap System
 
 When rooms connect, their blocked edge cells **overlap** to create shared walls:
 
@@ -103,7 +123,7 @@ Room A    +    Room B    =    Combined (5 cells, not 6)
 	   [■] = Shared blocked cell (overlap)
 ```
 
-### 5. Resource Cloning and Safe Modifications
+### 6. Resource Cloning and Safe Modifications
 
 To enable safe modifications during dungeon generation (like setting cell types to DOOR at connection points), the generator **clones all rooms before placement**:
 
@@ -127,7 +147,7 @@ This allows you to safely implement features like:
 - Modifying cell properties during placement
 - Implementing custom room merging logic
 
-### 6. Multi-Walker Dungeon Generation Algorithm
+### 7. Multi-Walker Dungeon Generation Algorithm
 
 The generator uses a **multi-walker room placement algorithm** that creates more organic, interconnected dungeons:
 
@@ -142,6 +162,7 @@ The generator uses a **multi-walker room placement algorithm** that creates more
 2. **Walker Behavior**:
    - Each walker independently tries to place rooms from its current position
    - **Avoids consecutive duplicate templates** (prevents same template being placed twice in a row by same walker)
+   - **Handles connector rooms atomically**: When placing a room with required connections, ALL required connections must be filled immediately
    - Tries up to 10 times per room (different templates/rotations)
    - If successful, moves to the newly placed room
    - If failed, teleports to a random room with open connections
@@ -164,11 +185,14 @@ The generator uses a **multi-walker room placement algorithm** that creates more
    - Pick random connection from walker's current room
    - Try random template and rotation
    - Check if room can be placed (allowing blocked cell overlaps)
+   - **If placing a connector room**: Reserve positions, atomically fill all required connections
    - If valid, **place the cloned room**, merge overlapping connections
    - Walker moves to the new room
 
 #### Key Features:
 
+- **Atomic Connector Placement**: Rooms with required connections are placed with all their required connections filled
+- **Position Reservation System**: Prevents other walkers from interfering during atomic operations
 - **Consecutive Duplicate Prevention**: Same template won't be placed twice in a row by the same walker
 - **Multiple Simultaneous Walkers**: 3+ walkers work in parallel for varied layouts
 - **Cell-Count Based**: Stops at target cell count, not room count (more precise control)

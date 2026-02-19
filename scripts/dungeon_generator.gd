@@ -98,6 +98,10 @@ var placed_rooms: Array[PlacedRoom] = []
 ## Grid of occupied cells (for collision detection)
 var occupied_cells: Dictionary = {}  # Vector2i -> PlacedRoom
 
+## Reserved positions for atomic connector placement
+## Prevents other walkers from placing rooms at these positions
+var reserved_positions: Dictionary = {}  # Vector2i -> bool
+
 ## Active walkers during generation
 var active_walkers: Array[Walker] = []
 
@@ -216,6 +220,7 @@ func generate() -> bool:
 
 ## Walker attempts to place a room from its current position
 ## Returns true if a room was successfully placed
+## Now handles connector rooms atomically - all required connections must be filled
 func _walker_try_place_room(walker: Walker) -> bool:
 	# Get open connections from walker's current room
 	var open_connections = _get_open_connections(walker.current_room)
@@ -271,11 +276,33 @@ func _walker_try_place_room(walker: Walker) -> bool:
 				var placement = _try_connect_room(walker.current_room, conn_point, rotated_room, rotation, template)
 				
 				if placement != null:
-					_place_room(placement)
-					walker.move_to_room(placement)
-					# Emit signal for visualization
-					room_placed.emit(placement, walker)
-					return true
+					# Check if this is a connector room (has required connections)
+					if rotated_room.is_connector_piece():
+						# This is a connector - must atomically fill all required connections
+						# First, reserve positions for this room
+						_reserve_room_positions(rotated_room, placement.position)
+						
+						# Try to fill all required connections atomically
+						var success = _fill_required_connections_atomic(placement, walker)
+						
+						# Unreserve positions for the connector itself
+						_unreserve_room_positions(rotated_room, placement.position)
+						
+						if success:
+							# Atomic placement succeeded - place the connector and all its required rooms
+							_place_room(placement)
+							walker.move_to_room(placement)
+							room_placed.emit(placement, walker)
+							return true
+						else:
+							# Atomic placement failed - try next rotation/template
+							continue
+					else:
+						# Not a connector - place normally
+						_place_room(placement)
+						walker.move_to_room(placement)
+						room_placed.emit(placement, walker)
+						return true
 	
 	return false
 
@@ -365,7 +392,8 @@ func _try_connect_room(
 	from_connection: MetaRoom.ConnectionPoint,
 	to_room: MetaRoom,
 	rotation: RoomRotator.Rotation,
-	original_template: MetaRoom
+	original_template: MetaRoom,
+	ignore_reserved: bool = false
 ) -> PlacedRoom:
 	# Find matching connection points in the target room
 	var to_connections = to_room.get_connection_points()
@@ -384,7 +412,7 @@ func _try_connect_room(
 		var target_pos = from_world_pos - Vector2i(to_conn.x, to_conn.y)
 		
 		# Check if room can be placed with allowed overlaps
-		if _can_place_room(to_room, target_pos):
+		if _can_place_room(to_room, target_pos, ignore_reserved):
 			return PlacedRoom.new(to_room, target_pos, rotation, original_template)
 	
 	return null
@@ -392,7 +420,8 @@ func _try_connect_room(
 
 ## Checks if a room can be placed at the given position without overlapping
 ## Allows BLOCKED cells to overlap with other BLOCKED cells
-func _can_place_room(room: MetaRoom, position: Vector2i) -> bool:
+## Also checks for reserved positions (used in atomic connector placement)
+func _can_place_room(room: MetaRoom, position: Vector2i, ignore_reserved: bool = false) -> bool:
 	for y in range(room.height):
 		for x in range(room.width):
 			var cell = room.get_cell(x, y)
@@ -400,6 +429,10 @@ func _can_place_room(room: MetaRoom, position: Vector2i) -> bool:
 				continue
 			
 			var world_pos = position + Vector2i(x, y)
+			
+			# Check if position is reserved (unless we're ignoring reservations)
+			if not ignore_reserved and reserved_positions.has(world_pos):
+				return false
 			
 			# If this cell is blocked, it can overlap with other blocked cells
 			if cell.cell_type == MetaCell.CellType.BLOCKED:
@@ -504,6 +537,143 @@ func _merge_overlapping_cells(existing_cell: MetaCell, new_cell: MetaCell, local
 	return connected_direction
 
 
+## Reserves all cell positions that a room would occupy
+## Used to prevent other walkers from placing rooms at these positions during atomic placement
+func _reserve_room_positions(room: MetaRoom, position: Vector2i) -> void:
+	for y in range(room.height):
+		for x in range(room.width):
+			var cell = room.get_cell(x, y)
+			if cell == null:
+				continue
+			
+			var world_pos = position + Vector2i(x, y)
+			
+			# Only reserve non-blocked cells (blocked cells can overlap anyway)
+			if cell.cell_type != MetaCell.CellType.BLOCKED:
+				reserved_positions[world_pos] = true
+
+
+## Unreserves all cell positions that were reserved for a room
+func _unreserve_room_positions(room: MetaRoom, position: Vector2i) -> void:
+	for y in range(room.height):
+		for x in range(room.width):
+			var cell = room.get_cell(x, y)
+			if cell == null:
+				continue
+			
+			var world_pos = position + Vector2i(x, y)
+			reserved_positions.erase(world_pos)
+
+
+## Attempts to atomically fill all required connections of a placed connector room
+## Returns true if all required connections were successfully filled
+## If any required connection cannot be filled, returns false and rolls back all placements
+func _fill_required_connections_atomic(connector_placement: PlacedRoom, walker: Walker) -> bool:
+	var required_connections = connector_placement.room.get_required_connection_points()
+	
+	# No required connections = nothing to fill
+	if required_connections.is_empty():
+		return true
+	
+	# Track all rooms we place during this atomic operation
+	var placed_rooms_backup: Array[PlacedRoom] = []
+	var reserved_positions_backup: Array[Vector2i] = []
+	
+	# Try to fill each required connection
+	for req_conn in required_connections:
+		var conn_world_pos = connector_placement.get_cell_world_pos(req_conn.x, req_conn.y)
+		var adjacent_pos = conn_world_pos + _get_direction_offset(req_conn.direction)
+		
+		# Check if this connection is already satisfied (another room is there)
+		if occupied_cells.has(adjacent_pos):
+			# Connection already filled - continue
+			continue
+		
+		# Try to place a room at this connection
+		# We need to place EITHER a room OR a non-connector room
+		var placed = _try_place_room_at_connection(connector_placement, req_conn, walker, true)
+		
+		if placed == null:
+			# Failed to fill this required connection - rollback everything
+			_rollback_atomic_placement(placed_rooms_backup, reserved_positions_backup)
+			return false
+		
+		# Track this placement for potential rollback
+		placed_rooms_backup.append(placed)
+		
+		# Reserve positions for this newly placed room
+		_reserve_room_positions(placed.room, placed.position)
+		for y in range(placed.room.height):
+			for x in range(placed.room.width):
+				var cell = placed.room.get_cell(x, y)
+				if cell != null and cell.cell_type != MetaCell.CellType.BLOCKED:
+					reserved_positions_backup.append(placed.position + Vector2i(x, y))
+	
+	# All required connections were successfully filled
+	# Actually place all the rooms and unreserve positions
+	for placed in placed_rooms_backup:
+		_place_room(placed)
+		room_placed.emit(placed, walker)
+	
+	# Clear reservations
+	for pos in reserved_positions_backup:
+		reserved_positions.erase(pos)
+	
+	return true
+
+
+## Rolls back an atomic placement operation
+func _rollback_atomic_placement(placements: Array[PlacedRoom], reservations: Array[Vector2i]) -> void:
+	# Note: We don't need to undo anything because we never actually placed the rooms
+	# The reservations just need to be cleared
+	for pos in reservations:
+		reserved_positions.erase(pos)
+
+
+## Tries to place a room at a specific connection point
+## Used by atomic connector filling
+## ignore_reserved allows us to check positions that we've reserved ourselves
+func _try_place_room_at_connection(
+	from_placement: PlacedRoom, 
+	from_connection: MetaRoom.ConnectionPoint, 
+	walker: Walker,
+	ignore_reserved: bool = false
+) -> PlacedRoom:
+	# Get available room templates, excluding the current room template
+	var available_templates: Array[MetaRoom] = []
+	for template in room_templates:
+		if template == from_placement.original_template:
+			continue
+		available_templates.append(template)
+	
+	if available_templates.is_empty():
+		return null
+	
+	# Try random templates
+	available_templates.shuffle()
+	
+	for template in available_templates:
+		# Try all rotations
+		var rotations = RoomRotator.get_all_rotations()
+		rotations.shuffle()
+		
+		for rotation in rotations:
+			var rotated_room = RoomRotator.rotate_room(template, rotation)
+			var placement = _try_connect_room(
+				from_placement, 
+				from_connection, 
+				rotated_room, 
+				rotation, 
+				template,
+				ignore_reserved
+			)
+			
+			if placement != null:
+				return placement
+	
+	return null
+
+
 ## Gets the offset vector for a direction
 func _get_direction_offset(direction: MetaCell.Direction) -> Vector2i:
 	match direction:
@@ -536,6 +706,7 @@ func _get_random_room_with_connections() -> MetaRoom:
 func clear_dungeon() -> void:
 	placed_rooms.clear()
 	occupied_cells.clear()
+	reserved_positions.clear()
 	active_walkers.clear()
 	next_walker_id = 0
 

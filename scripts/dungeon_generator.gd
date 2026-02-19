@@ -92,6 +92,11 @@ class Walker:
 ## Directional bias for more compact dungeons (0 = no bias, 1 = strong bias towards center)
 @export_range(0.0, 1.0) var compactness_bias: float = 0.3
 
+## Maximum recursion depth when validating required connections
+## Limits how many chained required connections can be validated
+## Higher values allow more complex room chains but may impact performance
+const MAX_REQUIRED_CONNECTION_DEPTH: int = 3
+
 ## List of all placed rooms in the dungeon
 var placed_rooms: Array[PlacedRoom] = []
 
@@ -225,10 +230,12 @@ func _walker_try_place_room(walker: Walker) -> bool:
 		return false
 	
 	# Get available room templates, excluding the walker's current room template
+	var current_is_connection_room = walker.current_room.room.is_connection_room()
 	var available_templates: Array[MetaRoom] = []
 	for template in room_templates:
-		# Skip if template is the same as walker's current room (prevent consecutive same template)
-		if template == walker.current_room.original_template:
+		# Skip same template; also skip connection rooms when walker is at a connection room
+		if template == walker.current_room.original_template or \
+				(current_is_connection_room and template.is_connection_room()):
 			continue
 		available_templates.append(template)
 	
@@ -271,10 +278,72 @@ func _walker_try_place_room(walker: Walker) -> bool:
 				var placement = _try_connect_room(walker.current_room, conn_point, rotated_room, rotation, template)
 				
 				if placement != null:
+					# Check if this room has required connections that need to be satisfied
+					var required_conns = rotated_room.get_required_connection_points()
+					
+					if required_conns.is_empty():
+						# No required connections – place normally
+						_place_room(placement)
+						walker.move_to_room(placement)
+						room_placed.emit(placement, walker)
+						return true
+					
+					# Determine which required connection is the incoming one (already satisfied)
+					var incoming_dir = MetaCell.opposite_direction(conn_point.direction)
+					
+					# Collect required connections that still need a room (excluding incoming)
+					var unsatisfied: Array[MetaRoom.ConnectionPoint] = []
+					var connections_viable := true
+					for req_conn in required_conns:
+						if req_conn.direction == incoming_dir:
+							continue
+						var conn_world_pos = placement.get_cell_world_pos(req_conn.x, req_conn.y)
+						if occupied_cells.has(conn_world_pos):
+							var existing_pl = occupied_cells[conn_world_pos]
+							var existing_c = _get_cell_at_world_pos(existing_pl, conn_world_pos)
+							if existing_c != null and existing_c.has_connection(MetaCell.opposite_direction(req_conn.direction)):
+								continue  # Matching connection present – DOOR will form when placed
+							# Occupied without matching connection – this rotation is not viable
+							connections_viable = false
+							break
+						unsatisfied.append(req_conn)
+					if not connections_viable:
+						continue  # Try next rotation
+					
+					if unsatisfied.is_empty():
+						# All required connections already satisfied
+						_place_room(placement)
+						walker.move_to_room(placement)
+						room_placed.emit(placement, walker)
+						return true
+					
+					# Simulate placing the main room to check feasibility of additional rooms
+					# Shallow duplicate is correct: _simulate_occupied only adds entries to the dict,
+					# it never modifies PlacedRoom or MetaCell objects, so references stay valid.
+					var saved_occupied = occupied_cells.duplicate()
+					_simulate_occupied(placement)
+					
+					var additional_rooms: Array[PlacedRoom] = []
+					var all_satisfied := true
+					
+					# Recursively validate required connections (with depth limit to prevent infinite loops)
+					all_satisfied = _validate_required_connections_recursive(
+						placement, unsatisfied, additional_rooms, 0, MAX_REQUIRED_CONNECTION_DEPTH
+					)
+					
+					# Always restore occupied_cells after simulation
+					occupied_cells = saved_occupied
+					
+					if not all_satisfied:
+						continue  # Try next rotation / template
+					
+					# Commit: place main room and all additional rooms
 					_place_room(placement)
 					walker.move_to_room(placement)
-					# Emit signal for visualization
 					room_placed.emit(placement, walker)
+					for additional in additional_rooms:
+						_place_room(additional)
+						room_placed.emit(additional, walker)
 					return true
 	
 	return false
@@ -504,6 +573,101 @@ func _merge_overlapping_cells(existing_cell: MetaCell, new_cell: MetaCell, local
 	return connected_direction
 
 
+## Adds room cells to occupied_cells without adding to placed_rooms and without merging.
+## Used for feasibility simulation before committing placement.
+## Mimics _place_room's behavior: does NOT overwrite existing entries (blocked-blocked overlap).
+func _simulate_occupied(placement: PlacedRoom) -> void:
+	for y in range(placement.room.height):
+		for x in range(placement.room.width):
+			var cell = placement.room.get_cell(x, y)
+			if cell == null:
+				continue
+			var world_pos = placement.get_cell_world_pos(x, y)
+			if not occupied_cells.has(world_pos):
+				occupied_cells[world_pos] = placement
+
+
+## Recursively validates required connections for a room and its dependencies.
+## Returns true if all required connections can be satisfied, false otherwise.
+## Populates additional_rooms with all rooms needed to satisfy requirements.
+## If max_depth is reached, returns false and prevents the entire room chain from being placed.
+func _validate_required_connections_recursive(
+	placement: PlacedRoom,
+	unsatisfied: Array[MetaRoom.ConnectionPoint],
+	additional_rooms: Array[PlacedRoom],
+	depth: int,
+	max_depth: int
+) -> bool:
+	# Prevent infinite recursion - if we reach max depth, fail the entire placement
+	# This ensures we don't have overly complex room chains that could cause issues
+	if depth >= max_depth:
+		return false
+	
+	# Try to satisfy each unsatisfied connection
+	for req_conn in unsatisfied:
+		var found = _find_room_for_required_connection(placement, req_conn)
+		if found == null:
+			return false
+		
+		additional_rooms.append(found)
+		_simulate_occupied(found)
+		
+		# Check if the newly placed room also has required connections
+		var new_required = found.room.get_required_connection_points()
+		if not new_required.is_empty():
+			# Find which connection is the incoming one (from placement to found)
+			var incoming_dir = MetaCell.opposite_direction(req_conn.direction)
+			
+			# Collect unsatisfied connections for the new room
+			var new_unsatisfied: Array[MetaRoom.ConnectionPoint] = []
+			var connections_viable := true
+			for new_req_conn in new_required:
+				if new_req_conn.direction == incoming_dir:
+					continue
+				var conn_world_pos = found.get_cell_world_pos(new_req_conn.x, new_req_conn.y)
+				if occupied_cells.has(conn_world_pos):
+					var existing_pl = occupied_cells[conn_world_pos]
+					var existing_c = _get_cell_at_world_pos(existing_pl, conn_world_pos)
+					if existing_c != null and existing_c.has_connection(MetaCell.opposite_direction(new_req_conn.direction)):
+						continue  # Matching connection present – DOOR will form when placed
+					# Occupied without matching connection – this chain is not viable
+					connections_viable = false
+					break
+				new_unsatisfied.append(new_req_conn)
+			if not connections_viable:
+				return false
+			
+			# Recursively validate the new room's requirements
+			if not new_unsatisfied.is_empty():
+				var success = _validate_required_connections_recursive(
+					found, new_unsatisfied, additional_rooms, depth + 1, max_depth
+				)
+				if not success:
+					return false
+	
+	return true
+
+
+## Finds a normal (non-connection) room template+rotation that can connect to the given
+## required connection point. Only normal rooms are allowed next to connection rooms.
+## Returns null if no valid room is found.
+func _find_room_for_required_connection(
+	from_placement: PlacedRoom,
+	req_conn: MetaRoom.ConnectionPoint
+) -> PlacedRoom:
+	var rotations = RoomRotator.get_all_rotations()
+	for template in room_templates:
+		# Connection rooms must only connect to normal rooms, never to other connection rooms
+		if template.is_connection_room():
+			continue
+		for rotation in rotations:
+			var rotated = RoomRotator.rotate_room(template, rotation)
+			var candidate = _try_connect_room(from_placement, req_conn, rotated, rotation, template)
+			if candidate != null:
+				return candidate
+	return null
+
+
 ## Gets the offset vector for a direction
 func _get_direction_offset(direction: MetaCell.Direction) -> Vector2i:
 	match direction:
@@ -518,12 +682,13 @@ func _get_direction_offset(direction: MetaCell.Direction) -> Vector2i:
 	return Vector2i.ZERO
 
 
-## Gets a random room template that has connections
+## Gets a random room template that has connections and is not a connection room.
+## Connection rooms (T, L, I) cannot be the starting room.
 func _get_random_room_with_connections() -> MetaRoom:
 	var valid_rooms: Array[MetaRoom] = []
 	
 	for template in room_templates:
-		if template.has_connection_points():
+		if template.has_connection_points() and not template.is_connection_room():
 			valid_rooms.append(template)
 	
 	if valid_rooms.is_empty():

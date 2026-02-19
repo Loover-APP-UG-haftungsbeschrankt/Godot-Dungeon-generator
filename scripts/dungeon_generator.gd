@@ -96,7 +96,6 @@ class Walker:
 ## Limits how many chained required connections can be validated
 ## Higher values allow more complex room chains but may impact performance
 const MAX_REQUIRED_CONNECTION_DEPTH: int = 3
-@export_range(0.0, 1.0) var compactness_bias: float = 0.3
 
 ## List of all placed rooms in the dungeon
 var placed_rooms: Array[PlacedRoom] = []
@@ -310,7 +309,9 @@ func _walker_try_place_room(walker: Walker) -> bool:
 						return true
 					
 					# Simulate placing the main room to check feasibility of additional rooms
-					var saved_occupied = occupied_cells.duplicate(true)
+					# Shallow duplicate is correct: _simulate_occupied only adds entries to the dict,
+					# it never modifies PlacedRoom or MetaCell objects, so references stay valid.
+					var saved_occupied = occupied_cells.duplicate()
 					_simulate_occupied(placement)
 					
 					var additional_rooms: Array[PlacedRoom] = []

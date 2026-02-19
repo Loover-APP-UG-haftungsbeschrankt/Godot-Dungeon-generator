@@ -78,23 +78,27 @@ func get_connection_points() -> Array[ConnectionPoint]:
 	for y in range(height):
 		for x in range(width):
 			var cell = get_cell(x, y)
-			#if cell == null or cell.cell_type == MetaCell.CellType.BLOCKED:
-			#	continue
+			if cell == null:
+				continue
 			
-			# Check UP connection (y = 0)
-			if y == 0 and cell.connection_up:
+			# Check all connections on all cells
+			# Note: Properly designed rooms should only have connections on edge cells,
+			# but after rotation, we don't check edges to ensure all connections are found
+			
+			# Check UP connection
+			if cell.connection_up:
 				connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.UP))
 			
-			# Check RIGHT connection (x = width - 1)
-			if x == width - 1 and cell.connection_right:
+			# Check RIGHT connection
+			if cell.connection_right:
 				connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.RIGHT))
 			
-			# Check BOTTOM connection (y = height - 1)
-			if y == height - 1 and cell.connection_bottom:
+			# Check BOTTOM connection
+			if cell.connection_bottom:
 				connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.BOTTOM))
 			
-			# Check LEFT connection (x = 0)
-			if x == 0 and cell.connection_left:
+			# Check LEFT connection
+			if cell.connection_left:
 				connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.LEFT))
 	
 	return connections

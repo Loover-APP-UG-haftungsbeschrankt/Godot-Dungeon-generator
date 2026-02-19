@@ -7,6 +7,7 @@ func _init():
 	
 	test_partial_fulfillment_logic()
 	test_connector_placement_scenarios()
+	test_expected_outcomes()
 	
 	print("\n=== All Tests Completed ===")
 	quit()

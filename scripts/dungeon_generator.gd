@@ -566,9 +566,9 @@ func _unreserve_room_positions(room: MetaRoom, position: Vector2i) -> void:
 			reserved_positions.erase(world_pos)
 
 
-## Attempts to atomically fill all required connections of a placed connector room
+## Attempts to fill required connections of a placed connector room using best-effort strategy
 ## Returns true if at least one required connection was successfully filled or all are already satisfied
-## Uses best-effort strategy: fills what's possible, leaves rest open for later
+## Uses best-effort: fills what's possible, leaves unfillable connections open for later walkers
 func _fill_required_connections_atomic(connector_placement: PlacedRoom, walker: Walker) -> bool:
 	var required_connections = connector_placement.room.get_required_connection_points()
 	
@@ -582,7 +582,6 @@ func _fill_required_connections_atomic(connector_placement: PlacedRoom, walker: 
 	
 	# Track how many connections we could satisfy
 	var connections_satisfied = 0
-	var connections_attempted = 0
 	
 	# Try to fill each required connection (best-effort)
 	for req_conn in required_connections:
@@ -594,8 +593,6 @@ func _fill_required_connections_atomic(connector_placement: PlacedRoom, walker: 
 			# Connection already has a proper door - count as satisfied
 			connections_satisfied += 1
 			continue
-		
-		connections_attempted += 1
 		
 		# Try to place a room at this connection to create the door
 		# Preferably a non-connector room to avoid nested atomicity issues

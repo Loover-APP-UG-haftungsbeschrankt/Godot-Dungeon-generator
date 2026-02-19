@@ -12,11 +12,11 @@ After three previous fixes, the issue persisted. Turns out there was a FUNDAMENT
 Both `get_connection_points()` and `get_required_connection_points()` checked if cells were on specific edges:
 
 ```gdscript
-// Original code (BUGGY):
-if y == 0 and cell.connection_up:  // Must be on top edge
-if x == width - 1 and cell.connection_right:  // Must be on right edge
-if y == height - 1 and cell.connection_bottom:  // Must be on bottom edge
-if x == 0 and cell.connection_left:  // Must be on left edge
+# Original code (BUGGY):
+if y == 0 and cell.connection_up:  # Must be on top edge
+if x == width - 1 and cell.connection_right:  # Must be on right edge
+if y == height - 1 and cell.connection_bottom:  # Must be on bottom edge
+if x == 0 and cell.connection_left:  # Must be on left edge
 ```
 
 **This breaks after rotation!**
@@ -69,25 +69,25 @@ if x == 0 and cell.connection_left:  // Must be on left edge
 
 **Fixed `get_connection_points()` (line 73-103):**
 ```gdscript
-// Before: Edge checks required
+# Before: Edge checks required
 if y == 0 and cell.connection_up:
 if x == width - 1 and cell.connection_right:
-// ...
+# ...
 
-// After: No edge checks
+# After: No edge checks
 if cell.connection_up:
     connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.UP))
 if cell.connection_right:
     connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.RIGHT))
-// ...
+# ...
 ```
 
 **Fixed `get_required_connection_points()` (line 122-150):**
 ```gdscript
-// Same fix - removed all edge checks
+# Same fix - removed all edge checks
 if cell.connection_up:
     required_connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.UP))
-// ... for all directions
+# ... for all directions
 ```
 
 ### Why This Works:

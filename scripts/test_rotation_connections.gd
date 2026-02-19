@@ -17,7 +17,7 @@ func _ready() -> void:
 
 func test_l_room_rotation() -> void:
 	print("Test 1: L-Room connections after rotation")
-	print("-" * 60)
+	print("-".repeat(60))
 	
 	# Create L-room template
 	var l_room = MetaRoom.new()
@@ -86,7 +86,7 @@ func test_l_room_rotation() -> void:
 
 func test_t_room_rotation() -> void:
 	print("Test 2: T-Room connections after rotation")
-	print("-" * 60)
+	print("-".repeat(60))
 	
 	# Create T-room template (simplified 5x4)
 	var t_room = MetaRoom.new()

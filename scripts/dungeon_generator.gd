@@ -439,7 +439,7 @@ func _can_fulfill_required_connections(room: MetaRoom, position: Vector2i, conne
 		if connecting_via != null:
 			print("Connecting via: (", connecting_via.x, ", ", connecting_via.y, ") direction ", connecting_via.direction)
 		else:
-			print("WARNING: No connecting_via specified! Validating ALL required connections!")
+			print("INFO: No connecting_via specified - all required connections must be pre-satisfied")
 	
 	# If no required connections, it's not really a connection room (shouldn't happen)
 	if required_connections.is_empty():

@@ -82,8 +82,9 @@ func get_connection_points() -> Array[ConnectionPoint]:
 				continue
 			
 			# Check all connections on all cells
-			# Note: Properly designed rooms should only have connections on edge cells,
-			# but after rotation, we don't check edges to ensure all connections are found
+			# Original room designs place connections on edge cells, but rotation moves
+			# these cells to new positions. By checking all cells regardless of edge position,
+			# we ensure rotated rooms have their connections properly detected.
 			
 			# Check UP connection
 			if cell.connection_up:
@@ -135,7 +136,8 @@ func get_required_connection_points() -> Array[ConnectionPoint]:
 				continue
 			
 			# For cells with connection_required, add ALL their connections
-			# regardless of whether they're on edges (rotation might move them)
+			# Same logic as get_connection_points() - rotation moves required connection
+			# cells away from original edge positions, so we check all cells
 			
 			# Check UP connection
 			if cell.connection_up:

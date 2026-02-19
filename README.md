@@ -176,7 +176,7 @@ The generator uses a **multi-walker room placement algorithm** that creates more
 
 #### Key Features:
 
-- **Required Connection Validation**: Ensures rooms with mandatory connections (like T-rooms) are fully connected **(NEW!)**
+- **Required Connection Validation**: Ensures rooms with mandatory connections (like T-rooms) are fully connected
 - **Consecutive Duplicate Prevention**: Same template won't be placed twice in a row by the same walker
 - **Multiple Simultaneous Walkers**: 3+ walkers work in parallel for varied layouts
 - **Cell-Count Based**: Stops at target cell count, not room count (more precise control)
@@ -232,7 +232,7 @@ This algorithm creates dungeons with:
 - **V** - Toggle step-by-step generation mode
 - **C** - Increase compactness bias (+0.1)
 - **X** - Decrease compactness bias (-0.1)
-- **A** - Toggle all walker paths on/off **(NEW!)**
+- **A** - Toggle all walker paths on/off
 - **0-9** - Toggle visibility of individual walker paths (press walker ID number)
 - **Home** - Reset camera to center (changed from 0 key)
 
@@ -418,9 +418,9 @@ X X X
 - `target_meta_cell_count`: Target total cell count to generate (default: 500)
 - `max_iterations`: Maximum generation loop iterations for safety (default: 10000)
 - `generation_seed`: Seed for reproducible generation (0 = random)
-- **`compactness_bias`**: Controls how compact dungeons are (0.0 = random, 1.0 = very compact, default: 0.3) **(NEW!)**
-- **`enable_visualization`**: Enable step-by-step visualization mode (default: false) **(NEW!)**
-- **`visualization_step_delay`**: Delay in seconds between steps when visualizing (default: 0.1) **(NEW!)**
+- **`compactness_bias`**: Controls how compact dungeons are (0.0 = random, 1.0 = very compact, default: 0.3)
+- **`enable_visualization`**: Enable step-by-step visualization mode (default: false)
+- **`visualization_step_delay`**: Delay in seconds between steps when visualizing (default: 0.1)
 
 ### MetaRoom
 - `width`: Width of the room in cells
@@ -435,11 +435,11 @@ X X X
 - **`draw_walkers`**: Show active walker markers (default: true)
 - **`draw_walker_paths`**: Show walker path trails (default: true)
 - **`path_line_width`**: Width of walker path lines in pixels (default: 4.0)
-- **`draw_step_numbers`**: Show numbered markers at every room (default: true) **(UPDATED!)**
-- **`draw_return_indicators`**: Highlight when walker returns to visited room (default: true) **(NEW!)**
+- **`draw_step_numbers`**: Show numbered markers at every room (default: true)
+- **`draw_return_indicators`**: Highlight when walker returns to visited room (default: true)
 - **`teleport_dash_length`**: Length of dashes in teleport lines (default: 10.0)
 - **`teleport_gap_length`**: Length of gaps in teleport lines (default: 10.0)
-- **`step_marker_radius`**: Radius of step number circle markers (default: 14.0) **(UPDATED!)**
+- **`step_marker_radius`**: Radius of step number circle markers (default: 14.0)
 
 **Note:** `teleport_distance_threshold` has been removed - teleport detection is now exact, not heuristic-based.
 

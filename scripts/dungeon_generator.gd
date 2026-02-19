@@ -92,6 +92,12 @@ class Walker:
 ## Directional bias for more compact dungeons (0 = no bias, 1 = strong bias towards center)
 @export_range(0.0, 1.0) var compactness_bias: float = 0.3
 
+## Maximum recursion depth when validating required connections
+## Limits how many chained required connections can be validated
+## Higher values allow more complex room chains but may impact performance
+const MAX_REQUIRED_CONNECTION_DEPTH: int = 3
+@export_range(0.0, 1.0) var compactness_bias: float = 0.3
+
 ## List of all placed rooms in the dungeon
 var placed_rooms: Array[PlacedRoom] = []
 
@@ -312,7 +318,7 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					
 					# Recursively validate required connections (with depth limit to prevent infinite loops)
 					all_satisfied = _validate_required_connections_recursive(
-						placement, unsatisfied, additional_rooms, 0, 3
+						placement, unsatisfied, additional_rooms, 0, MAX_REQUIRED_CONNECTION_DEPTH
 					)
 					
 					# Always restore occupied_cells after simulation
@@ -574,6 +580,7 @@ func _simulate_occupied(placement: PlacedRoom) -> void:
 ## Recursively validates required connections for a room and its dependencies.
 ## Returns true if all required connections can be satisfied, false otherwise.
 ## Populates additional_rooms with all rooms needed to satisfy requirements.
+## If max_depth is reached, returns false and prevents the entire room chain from being placed.
 func _validate_required_connections_recursive(
 	placement: PlacedRoom,
 	unsatisfied: Array[MetaRoom.ConnectionPoint],
@@ -581,7 +588,8 @@ func _validate_required_connections_recursive(
 	depth: int,
 	max_depth: int
 ) -> bool:
-	# Prevent infinite recursion
+	# Prevent infinite recursion - if we reach max depth, fail the entire placement
+	# This ensures we don't have overly complex room chains that could cause issues
 	if depth >= max_depth:
 		return false
 	

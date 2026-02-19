@@ -4,60 +4,60 @@ extends SceneTree
 
 func _init():
 	print("=== Testing Room Rotation System ===\n")
-
-# Test 1: Connection rotation
-test_connection_rotation()
-
-# Test 2: Position rotation
-test_position_rotation()
-
-# Test 3: Full room rotation with connection_required flag
-test_room_rotation_with_required()
-
-print("\n=== All Tests Completed ===")
-quit()
+	
+	# Test 1: Connection rotation
+	test_connection_rotation()
+	
+	# Test 2: Position rotation
+	test_position_rotation()
+	
+	# Test 3: Full room rotation with connection_required flag
+	test_room_rotation_with_required()
+	
+	print("\n=== All Tests Completed ===")
+	quit()
 
 func test_connection_rotation():
 	print("Test 1: Connection Direction Rotation")
 	print("--------------------------------------")
-
-var cell = MetaCell.new()
-cell.connection_up = true
-cell.connection_right = true
-cell.connection_required = true
-
-print("Original: UP=true, RIGHT=true, BOTTOM=false, LEFT=false, required=true")
-
-# Test 90° rotation
-var cell_90 = cell.clone()
-RoomRotator._rotate_cell_connections(cell_90, RoomRotator.Rotation.DEG_90)
-print("After 90°: UP=%s, RIGHT=%s, BOTTOM=%s, LEFT=%s, required=%s" % [
-cell_90.connection_up, cell_90.connection_right, 
-cell_90.connection_bottom, cell_90.connection_left,
-cell_90.connection_required
-])
-
-# Expected: UP=false, RIGHT=true (was UP), BOTTOM=true (was RIGHT), LEFT=false
-var pass_90 = (!cell_90.connection_up and cell_90.connection_right and 
-               cell_90.connection_bottom and !cell_90.connection_left and
-               cell_90.connection_required)
-print("90° rotation: %s" % ("PASS" if pass_90 else "FAIL"))
-
-# Test 180° rotation
-var cell_180 = cell.clone()
-RoomRotator._rotate_cell_connections(cell_180, RoomRotator.Rotation.DEG_180)
-print("After 180°: UP=%s, RIGHT=%s, BOTTOM=%s, LEFT=%s" % [
-cell_180.connection_up, cell_180.connection_right, 
-cell_180.connection_bottom, cell_180.connection_left
-])
-
-# Expected: UP=false (was BOTTOM), RIGHT=false (was LEFT), BOTTOM=true (was UP), LEFT=true (was RIGHT)
-var pass_180 = (!cell_180.connection_up and !cell_180.connection_right and 
-                cell_180.connection_bottom and cell_180.connection_left)
-print("180° rotation: %s" % ("PASS" if pass_180 else "FAIL"))
-
-# Test 270° rotation
-var cell_270 = cell.clone()
+	
+	var cell = MetaCell.new()
+	cell.connection_up = true
+	cell.connection_right = true
+	cell.connection_required = true
+	
+	print("Original: UP=true, RIGHT=true, BOTTOM=false, LEFT=false, required=true")
+	
+	# Test 90° rotation
+	var cell_90 = cell.clone()
+	RoomRotator._rotate_cell_connections(cell_90, RoomRotator.Rotation.DEG_90)
+	print("After 90°: UP=%s, RIGHT=%s, BOTTOM=%s, LEFT=%s, required=%s" % [
+		cell_90.connection_up, cell_90.connection_right, 
+		cell_90.connection_bottom, cell_90.connection_left,
+		cell_90.connection_required
+	])
+	
+	# Expected: UP=false, RIGHT=true (was UP), BOTTOM=true (was RIGHT), LEFT=false
+	var pass_90 = (!cell_90.connection_up and cell_90.connection_right and 
+	               cell_90.connection_bottom and !cell_90.connection_left and
+	               cell_90.connection_required)
+	print("90° rotation: %s" % ("PASS" if pass_90 else "FAIL"))
+	
+	# Test 180° rotation
+	var cell_180 = cell.clone()
+	RoomRotator._rotate_cell_connections(cell_180, RoomRotator.Rotation.DEG_180)
+	print("After 180°: UP=%s, RIGHT=%s, BOTTOM=%s, LEFT=%s" % [
+		cell_180.connection_up, cell_180.connection_right, 
+		cell_180.connection_bottom, cell_180.connection_left
+	])
+	
+	# Expected: UP=false (was BOTTOM), RIGHT=false (was LEFT), BOTTOM=true (was UP), LEFT=true (was RIGHT)
+	var pass_180 = (!cell_180.connection_up and !cell_180.connection_right and 
+	                cell_180.connection_bottom and cell_180.connection_left)
+	print("180° rotation: %s" % ("PASS" if pass_180 else "FAIL"))
+	
+	# Test 270° rotation
+	var cell_270 = cell.clone()
 RoomRotator._rotate_cell_connections(cell_270, RoomRotator.Rotation.DEG_270)
 print("After 270°: UP=%s, RIGHT=%s, BOTTOM=%s, LEFT=%s" % [
 cell_270.connection_up, cell_270.connection_right, 

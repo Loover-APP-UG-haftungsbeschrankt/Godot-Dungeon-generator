@@ -660,6 +660,13 @@ func _try_place_room_at_connection(
 		
 		for rotation in rotations:
 			var rotated_room = RoomRotator.rotate_room(template, rotation)
+			
+			# Skip connector templates when filling required connections
+			# This prevents nested atomic operations which could lead to deadlocks
+			# Only non-connector rooms can be used to fill required connections
+			if rotated_room.is_connector_piece():
+				continue
+			
 			var placement = _try_connect_room(
 				from_placement, 
 				from_connection, 

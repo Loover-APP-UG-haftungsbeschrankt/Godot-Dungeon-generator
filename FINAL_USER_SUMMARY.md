@@ -113,8 +113,8 @@ Wenn du den Dungeon Generator jetzt startest:
 Um zu sehen warum T-Rooms platziert oder abgelehnt werden:
 
 ```gdscript
-// In scripts/dungeon_generator.gd, Zeile 434:
-var debug_connection_rooms = true  // Ändere false zu true
+# In scripts/dungeon_generator.gd, Zeile 434:
+var debug_connection_rooms = true  # Ändere false zu true
 ```
 
 Dann siehst du im Output:

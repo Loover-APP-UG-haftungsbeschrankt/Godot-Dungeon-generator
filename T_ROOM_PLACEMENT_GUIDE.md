@@ -200,8 +200,8 @@ This is the intended behavior - T-rooms are special junction points that appear 
 To see T-room placement attempts in real-time, enable debug logging:
 
 ```gdscript
-// In dungeon_generator.gd, line 434:
-var debug_connection_rooms = true  // Change false to true
+# In dungeon_generator.gd, line 434:
+var debug_connection_rooms = true  # Change false to true
 ```
 
 This will print:

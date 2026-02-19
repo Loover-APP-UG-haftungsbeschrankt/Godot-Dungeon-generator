@@ -732,6 +732,8 @@ func _is_connection_satisfied(connector_placement: PlacedRoom, conn_point: MetaR
 		return false
 	
 	# Get the adjacent room and cell
+	# Note: _get_cell_at_world_pos() retrieves a cell from a placed room at a specific world position
+	# It handles coordinate transformation from world space to the room's local space
 	var adjacent_placement = occupied_cells[adjacent_pos]
 	var adjacent_cell = _get_cell_at_world_pos(adjacent_placement, adjacent_pos)
 	if adjacent_cell == null:

@@ -14,6 +14,9 @@ func _init():
 	# Test 3: Verify L-room connections
 	test_l_room_required_connections()
 	
+	# Test 4: Door creation scenario
+	test_door_creation_scenario()
+	
 	print("\n=== All Tests Completed ===")
 	quit()
 

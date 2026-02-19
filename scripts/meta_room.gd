@@ -130,20 +130,23 @@ func get_required_connection_points() -> Array[ConnectionPoint]:
 			if cell == null or not cell.connection_required:
 				continue
 			
-			# Check UP connection (y = 0)
-			if y == 0 and cell.connection_up:
+			# For cells with connection_required, add ALL their connections
+			# regardless of whether they're on edges (rotation might move them)
+			
+			# Check UP connection
+			if cell.connection_up:
 				required_connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.UP))
 			
-			# Check RIGHT connection (x = width - 1)
-			if x == width - 1 and cell.connection_right:
+			# Check RIGHT connection
+			if cell.connection_right:
 				required_connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.RIGHT))
 			
-			# Check BOTTOM connection (y = height - 1)
-			if y == height - 1 and cell.connection_bottom:
+			# Check BOTTOM connection
+			if cell.connection_bottom:
 				required_connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.BOTTOM))
 			
-			# Check LEFT connection (x = 0)
-			if x == 0 and cell.connection_left:
+			# Check LEFT connection
+			if cell.connection_left:
 				required_connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.LEFT))
 	
 	return required_connections

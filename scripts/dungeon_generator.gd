@@ -431,13 +431,21 @@ func _can_fulfill_required_connections(room: MetaRoom, position: Vector2i, conne
 	var required_connections = room.get_required_connection_points()
 	
 	# Debug logging (can be disabled in production)
-	var debug_connection_rooms = true  # Set to true for debugging
+	var debug_connection_rooms = false  # Set to true for debugging
 	var is_debug_room = room.room_name.contains("T") or room.room_name.contains("L")
 	if debug_connection_rooms and is_debug_room:
 		print("\n=== Validating ", room.room_name, " at ", position, " ===")
 		print("Required connections: ", required_connections.size())
 		if connecting_via != null:
 			print("Connecting via: (", connecting_via.x, ", ", connecting_via.y, ") direction ", connecting_via.direction)
+		else:
+			print("WARNING: No connecting_via specified! Validating ALL required connections!")
+	
+	# If no required connections, it's not really a connection room (shouldn't happen)
+	if required_connections.is_empty():
+		if debug_connection_rooms and is_debug_room:
+			print("  WARNING: No required connections found! Room data might be incorrect.")
+		return true
 	
 	# Check each required connection
 	for conn_point in required_connections:

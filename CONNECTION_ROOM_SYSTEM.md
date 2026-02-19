@@ -32,24 +32,28 @@ Examples:
 - If the room is a connection room, calls validation before accepting placement
 - Only places the room if all required connections can be fulfilled
 
-#### New `_can_fulfill_required_connections(room, position) -> bool`
-- Validates that all required connections are already satisfied
+#### New `_can_fulfill_required_connections(room, position, connecting_via) -> bool`
+- Validates that all required connections (except the one being used) are already satisfied
+- Takes an optional `connecting_via` parameter - the connection point being used to place the room
 - For each required connection:
+  - **Skips the connection being used to connect** (it's automatically fulfilled)
   - Checks the adjacent position in the connection direction
   - If no room exists there:
     - Returns `false` (required connection cannot be fulfilled)
   - If a room already exists there:
     - Returns `false` if it's a connection room (cannot satisfy requirement)
     - Continues checking if it's a normal room (satisfies requirement)
-- Returns `true` only if ALL required connections have normal rooms adjacent
+- Returns `true` only if ALL OTHER required connections have normal rooms adjacent
 
 ## Key Rules
 
 1. **Connection Room Detection**: Automatic based on `connection_required` flag
 2. **Placement Validation**: Only place connection rooms when all requirements can be met
 3. **Normal Room Requirement**: Only normal (non-connection) rooms can satisfy required connections
-4. **Backward Compatibility**: Normal rooms continue working exactly as before
-5. **Minimal Impact**: Validation only occurs for connection rooms, not for every room
+4. **Skip Connection In Use**: The connection being used for placement is automatically fulfilled (Fix #3)
+5. **Normal Start Room**: Connection rooms cannot be the starting room (Fix #2)
+6. **Backward Compatibility**: Normal rooms continue working exactly as before
+7. **Minimal Impact**: Validation only occurs for connection rooms, not for every room
 
 ## Example Flow
 

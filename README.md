@@ -156,16 +156,18 @@ Examples:
    - `MetaRoom.get_required_connection_points()` returns only the required connection points
 
 3. **Validation During Placement**:
-   - When placing a connection room, the generator validates that ALL required connections are **already fulfilled**
-   - Only **normal rooms** (non-connection rooms) that are already placed can satisfy required connection points
-   - If any required connection does not have a normal room adjacent, the connection room is not placed
-   - Empty spaces at required connections are not allowed - the connection must already exist
+   - When placing a connection room, the generator validates that required connections are fulfilled
+   - The connection being used to place the room is automatically fulfilled (skipped in validation)
+   - Only **normal rooms** (non-connection rooms) that are already placed can satisfy other required connection points
+   - If any other required connection does not have a normal room adjacent, the connection room is not placed
+   - Empty spaces at other required connections are not allowed
    - The generator tries other positions/rotations until all requirements are met
 
 4. **Benefits**:
    - Prevents "floating" corridor pieces that don't connect properly
    - Ensures L/T/I shaped rooms form valid pathways only when properly connected
    - Guarantees all required connections are satisfied before placement
+   - T-rooms can actually be placed when three paths meet (Fix #3!)
    - Normal rooms can still connect to connection rooms on non-required connections
    - Creates more structurally sound dungeons
 
@@ -178,7 +180,8 @@ Examples:
 [↓]···■     ← BOTTOM connection (REQUIRED)
   ↓
 This L-room requires both RIGHT and BOTTOM connections.
-It will only be placed if both can connect to normal rooms.
+When connecting via RIGHT, only BOTTOM needs validation (RIGHT is automatic).
+When connecting via BOTTOM, only RIGHT needs validation (BOTTOM is automatic).
 ```
 
 #### Implementation Details
@@ -194,10 +197,10 @@ func get_required_connection_points() -> Array[ConnectionPoint]
 	# Returns only connections marked as required
 
 # In DungeonGenerator.gd
-func _can_fulfill_required_connections(room: MetaRoom, position: Vector2i) -> bool
-	# Validates all required connections are already satisfied
-	# For each required connection, checks that a normal room is already placed
-	# Returns false if any required connection has no room or has a connection room
+func _can_fulfill_required_connections(room: MetaRoom, position: Vector2i, connecting_via: ConnectionPoint = null) -> bool
+	# Validates all OTHER required connections are already satisfied (skips connecting_via)
+	# For each required connection (except connecting_via), checks that a normal room is already placed
+	# Returns false if any other required connection has no room or has a connection room
 	# Returns true only if ALL required connections have normal rooms adjacent
 ```
 

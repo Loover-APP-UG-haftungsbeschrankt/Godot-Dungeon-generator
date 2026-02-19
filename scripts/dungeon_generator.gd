@@ -441,11 +441,10 @@ func _can_fulfill_required_connections(room: MetaRoom, position: Vector2i, conne
 	# Check each required connection
 	for conn_point in required_connections:
 		# Skip the connection we're using to connect - it's automatically fulfilled
-		if connecting_via != null:
-			if conn_point.x == connecting_via.x and conn_point.y == connecting_via.y and conn_point.direction == connecting_via.direction:
-				if debug_connection_rooms and room.room_name.contains("T"):
-					print("  Skipping connection at (", conn_point.x, ", ", conn_point.y, ") dir ", conn_point.direction, " - being used to connect")
-				continue  # This connection is being used to connect, so it's automatically fulfilled
+		if connecting_via != null and conn_point.x == connecting_via.x and conn_point.y == connecting_via.y and conn_point.direction == connecting_via.direction:
+			if debug_connection_rooms and room.room_name.contains("T"):
+				print("  Skipping connection at (", conn_point.x, ", ", conn_point.y, ") dir ", conn_point.direction, " - being used to connect")
+			continue  # This connection is being used to connect, so it's automatically fulfilled
 		
 		var conn_world_pos = position + Vector2i(conn_point.x, conn_point.y)
 		var adjacent_pos = conn_world_pos + _get_direction_offset(conn_point.direction)

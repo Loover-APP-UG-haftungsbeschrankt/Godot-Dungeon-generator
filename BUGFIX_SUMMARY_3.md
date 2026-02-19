@@ -1,7 +1,7 @@
 # Bug Fix #3: T-Rooms Not Placing At All
 
 ## Problem Report
-User reported: "Stil not placing T-Meta-Rooms."
+User reported: "Still not placing T-Meta-Rooms."
 
 Despite the previous two fixes, T-rooms were still not appearing in generated dungeons.
 

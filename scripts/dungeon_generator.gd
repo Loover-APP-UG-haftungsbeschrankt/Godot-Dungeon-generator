@@ -603,29 +603,48 @@ func _merge_overlapping_cells(existing_cell: MetaCell, new_cell: MetaCell, local
 
 
 ## Upgrades the overlapping connection cells to PASSAGE after the walker traverses them.
-## Only upgrades cells that were set to POTENTIAL_PASSAGE by the merge step.
-## Also upgrades adjacent POTENTIAL_PASSAGE cells for multi-cell-wide connections.
+## Uses BFS flood-fill from the connection point to upgrade all reachable POTENTIAL_PASSAGE cells.
 func _mark_passage_at_connection(from_placement: PlacedRoom, conn_point: MetaRoom.ConnectionPoint, new_placement: PlacedRoom) -> void:
-	var world_pos = from_placement.get_cell_world_pos(conn_point.x, conn_point.y)
-	_try_upgrade_cell_to_passage(from_placement, world_pos)
-	_try_upgrade_cell_to_passage(new_placement, world_pos)
+	var start_pos = from_placement.get_cell_world_pos(conn_point.x, conn_point.y)
+	var queue: Array[Vector2i] = [start_pos]
+	var visited: Dictionary = {}
 
-	# Also upgrade adjacent POTENTIAL_PASSAGE cells (multi-cell-wide connections)
-	for direction in [MetaCell.Direction.UP, MetaCell.Direction.RIGHT, MetaCell.Direction.BOTTOM, MetaCell.Direction.LEFT]:
-		var adj_pos = world_pos + _get_direction_offset(direction)
-		_try_upgrade_cell_to_passage(from_placement, adj_pos)
-		_try_upgrade_cell_to_passage(new_placement, adj_pos)
-		if occupied_cells.has(adj_pos):
-			var adj_placement: PlacedRoom = occupied_cells[adj_pos]
-			if adj_placement != from_placement and adj_placement != new_placement:
-				_try_upgrade_cell_to_passage(adj_placement, adj_pos)
+	while not queue.is_empty():
+		var pos: Vector2i = queue.pop_front()
+		if visited.has(pos):
+			continue
+		visited[pos] = true
+
+		# Collect all placements that own a cell at this position
+		var placements_at_pos: Array[PlacedRoom] = []
+		if occupied_cells.has(pos):
+			placements_at_pos.append(occupied_cells[pos])
+		# from_placement and new_placement may not be in occupied_cells yet at the exact pos
+		for pl in [from_placement, new_placement]:
+			if not placements_at_pos.has(pl):
+				placements_at_pos.append(pl)
+
+		# Try to upgrade; only continue BFS into a neighbor if at least one cell was upgraded here
+		var upgraded := false
+		for pl in placements_at_pos:
+			if _try_upgrade_cell_to_passage(pl, pos):
+				upgraded = true
+
+		if upgraded:
+			for direction in [MetaCell.Direction.UP, MetaCell.Direction.RIGHT, MetaCell.Direction.BOTTOM, MetaCell.Direction.LEFT]:
+				var adj_pos = pos + _get_direction_offset(direction)
+				if not visited.has(adj_pos):
+					queue.append(adj_pos)
 
 
 ## Upgrades a single cell to PASSAGE if it is currently POTENTIAL_PASSAGE.
-func _try_upgrade_cell_to_passage(placement: PlacedRoom, world_pos: Vector2i) -> void:
+## Returns true if the cell was upgraded.
+func _try_upgrade_cell_to_passage(placement: PlacedRoom, world_pos: Vector2i) -> bool:
 	var cell = _get_cell_at_world_pos(placement, world_pos)
 	if cell != null and cell.cell_type == MetaCell.CellType.POTENTIAL_PASSAGE:
 		cell.cell_type = MetaCell.CellType.PASSAGE
+		return true
+	return false
 
 
 ## Adds room cells to occupied_cells without adding to placed_rooms and without merging.

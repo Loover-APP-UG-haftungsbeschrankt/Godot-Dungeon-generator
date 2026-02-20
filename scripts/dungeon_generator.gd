@@ -216,12 +216,18 @@ func generate() -> bool:
 	# Main generation loop - continue until target cell count is reached
 	var iterations = 0
 	var all_rooms_enclosed := false
+	var consecutive_no_progress := 0
+	# Maximum consecutive iterations without placing any cell before giving up.
+	# Prevents long busy-loops when rooms exist with open connections but no template fits.
+	const MAX_NO_PROGRESS_ITERATIONS := 100
 	
-	while _count_total_cells() < target_meta_cell_count and iterations < max_iterations:
+	var current_cells := _count_total_cells()
+	while current_cells < target_meta_cell_count and iterations < max_iterations:
 		iterations += 1
+		var cells_at_start := current_cells
 		
 		# Emit step signal for visualization
-		generation_step.emit(iterations, _count_total_cells())
+		generation_step.emit(iterations, current_cells)
 		
 		# Each walker attempts to place one room
 		for walker in active_walkers:
@@ -238,6 +244,9 @@ func generate() -> bool:
 				# Emit walker moved signal - this is a normal move, not a teleport
 				walker_moved.emit(walker, old_pos, walker.current_room.position, false)
 				
+				# Update cached cell count only when a room was actually placed
+				current_cells = _count_total_cells()
+				
 				# Wait for visualization if enabled
 				if enable_visualization and visualization_step_delay > 0:
 					await get_tree().create_timer(visualization_step_delay).timeout
@@ -247,24 +256,37 @@ func generate() -> bool:
 			if not walker.is_alive:
 				_respawn_walker(walker)
 			
-			# If the walker is still dead after respawn, all rooms are fully enclosed.
+			# If the walker is still dead after respawn, no room has an open connection.
 			# No further progress is possible - stop generation immediately.
 			if not walker.is_alive:
 				all_rooms_enclosed = true
 				break
 			
 			# Check if we've reached target cell count
-			if _count_total_cells() >= target_meta_cell_count:
+			if current_cells >= target_meta_cell_count:
 				break
 		
 		if all_rooms_enclosed:
 			push_warning(
 				"DungeonGenerator: All rooms are fully enclosed, stopping early at %d/%d cells." \
-				% [_count_total_cells(), target_meta_cell_count]
+				% [current_cells, target_meta_cell_count]
 			)
 			break
+		
+		# Detect when walkers keep teleporting without placing anything.
+		# This happens when open connections exist but no template fits due to layout constraints.
+		if current_cells == cells_at_start:
+			consecutive_no_progress += 1
+			if consecutive_no_progress >= MAX_NO_PROGRESS_ITERATIONS:
+				push_warning(
+					"DungeonGenerator: No progress for %d iterations, stopping early at %d/%d cells." \
+					% [MAX_NO_PROGRESS_ITERATIONS, current_cells, target_meta_cell_count]
+				)
+				break
+		else:
+			consecutive_no_progress = 0
 	
-	var cell_count = _count_total_cells()
+	var cell_count = current_cells
 	var success = cell_count >= target_meta_cell_count
 	
 	# Post-processing: resolve remaining POTENTIAL_PASSAGE cells into PASSAGE or BLOCKED

@@ -420,31 +420,18 @@ func _walker_try_place_room(walker: Walker) -> bool:
 	return false
 
 
-## Respawns a walker at a random room with open connections
-## Can spawn at current walker's position or at another room
+## Respawns a walker by teleporting it to a random room with open connections.
+## Always teleports – staying at the current position is not useful since the walker
+## just proved it cannot place a room there.
 func _respawn_walker(walker: Walker) -> void:
 	var old_pos = walker.current_room.position
-	
-	# 50% chance to spawn at current position if it has open connections
-	# 50% chance to spawn at a random other room
-	var should_spawn_at_current_position = randf() < 0.5
-	
-	if should_spawn_at_current_position and not _get_open_connections(walker.current_room).is_empty():
-		# Spawn at current position - not a teleport
+	var spawn_target = _get_random_room_with_open_connections()
+	if spawn_target != null:
+		walker.current_room = spawn_target
 		walker.rooms_placed = 0
 		walker.is_alive = true
-		# Path history is kept to show the walker's trail
-		# No walker_moved signal needed as position didn't change
-	else:
-		# Spawn at a random room with open connections (no center bias for teleports)
-		var spawn_target = _get_random_room_with_open_connections()
-		if spawn_target != null:
-			walker.current_room = spawn_target
-			walker.rooms_placed = 0
-			walker.is_alive = true
-			walker.path_history.append(spawn_target.position)
-			# This is a teleport - the walker jumped to a non-adjacent room
-			walker_moved.emit(walker, old_pos, spawn_target.position, true)
+		walker.path_history.append(spawn_target.position)
+		walker_moved.emit(walker, old_pos, spawn_target.position, true)
 
 
 ## Gets all open connections from a placed room

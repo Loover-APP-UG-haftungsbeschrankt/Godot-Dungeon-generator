@@ -106,10 +106,30 @@ class RequiredRoomLink:
 ## Directional bias for more compact dungeons (0 = no bias, 1 = strong bias towards center)
 @export_range(0.0, 1.0) var compactness_bias: float = 0.3
 
+## Probability that a POTENTIAL_PASSAGE group is opened when neither side has a deep enough
+## dead-end chain. Applies only to shallow / trivial loops.
+## Range: 0.0 = never open shallow loops, 1.0 = always open (default: 0.1)
+@export_range(0.0, 1.0) var loop_passage_chance: float = 0.1
+
+## Minimum dead-end chain depth required on BOTH sides of a POTENTIAL_PASSAGE group
+## for it to be opened automatically as a loop passage.
+## A depth of N means at least N rooms with degree ≤ 2 must be reachable in an unbroken
+## chain from the passage entrance on each side before hitting a junction.
+## Example: depth 2 → chain of 3 rooms (entrance + 2 further rooms) required on each side.
+@export_range(1, 10) var min_loop_dead_end_depth: int = 2
+
 ## Maximum recursion depth when validating required connections
 ## Limits how many chained required connections can be validated
 ## Higher values allow more complex room chains but may impact performance
 const MAX_REQUIRED_CONNECTION_DEPTH: int = 3
+
+## All four cardinal directions in a fixed order — used throughout generation and post-processing
+const DIRECTIONS: Array[MetaCell.Direction] = [
+	MetaCell.Direction.UP,
+	MetaCell.Direction.RIGHT,
+	MetaCell.Direction.BOTTOM,
+	MetaCell.Direction.LEFT
+]
 
 ## List of all placed rooms in the dungeon
 var placed_rooms: Array[PlacedRoom] = []
@@ -128,6 +148,10 @@ var next_walker_id: int = 0
 ## Parameters: success (bool), room_count (int), cell_count (int)
 ## Note: cell_count parameter added in multi-walker version
 signal generation_complete(success: bool, room_count: int, cell_count: int)
+
+## Signal emitted after resolve_potential_passages() finishes
+## Parameters: opened_count (int), blocked_count (int) — number of passage groups opened/blocked
+signal passages_resolved(opened_count: int, blocked_count: int)
 
 ## Signal emitted when a room is placed (for visualization)
 ## Parameters: placement (PlacedRoom), walker (Walker)
@@ -228,6 +252,10 @@ func generate() -> bool:
 	
 	var cell_count = _count_total_cells()
 	var success = cell_count >= target_meta_cell_count
+	
+	# Post-processing: resolve remaining POTENTIAL_PASSAGE cells into PASSAGE or BLOCKED
+	resolve_potential_passages()
+	
 	generation_complete.emit(success, placed_rooms.size(), cell_count)
 	
 	print("DungeonGenerator: Generated ", placed_rooms.size(), " rooms with ", cell_count, " cells")
@@ -877,3 +905,235 @@ func _get_random_room_with_open_connections_compact() -> PlacedRoom:
 	
 	# Random selection
 	return rooms_with_open[randi() % rooms_with_open.size()]
+
+
+# ---------------------------------------------------------------------------
+# Post-processing: POTENTIAL_PASSAGE resolution via Dead-End Depth
+# ---------------------------------------------------------------------------
+
+## Resolves all remaining POTENTIAL_PASSAGE cells after meta-room generation.
+##
+## Every remaining POTENTIAL_PASSAGE group is an optional loop shortcut because
+## the walker algorithm already guarantees full dungeon connectivity.
+## The decision uses the dead-end depth of both sides of the potential passage:
+##
+##   depth_a = longest dead-end chain reachable from the room adjacent on side A
+##   depth_b = longest dead-end chain reachable from the room adjacent on side B
+##
+##   depth_a >= min_loop_dead_end_depth AND depth_b >= min_loop_dead_end_depth
+##     → PASSAGE  (meaningful shortcut rescuing deep dead-end arms on both sides)
+##   otherwise
+##     → BLOCKED with probability (1 - loop_passage_chance)
+##       (trivial loop; only opened by chance for occasional variety)
+##
+##   Components touching fewer than 2 distinct rooms → always BLOCKED (dead-end stub).
+##
+## Emits passages_resolved(opened_count, blocked_count) when done.
+func resolve_potential_passages() -> void:
+	var potential_cells: Dictionary = _collect_potential_passage_cells()
+
+	if potential_cells.is_empty():
+		passages_resolved.emit(0, 0)
+		return
+
+	var components: Array = _find_passage_components(potential_cells)
+	var room_graph: Dictionary = _build_room_graph()
+
+	var opened_count: int = 0
+	var blocked_count: int = 0
+
+	for i: int in range(components.size()):
+		var component: Array[Vector2i] = components[i]
+		var component_set: Dictionary = {}
+		for pos: Vector2i in component:
+			component_set[pos] = true
+
+		var room_ids: Array = _find_adjacent_room_ids(component, component_set)
+
+		var should_open: bool
+		if room_ids.size() < 2:
+			# Dead-end stub: no two distinct rooms to connect → always block
+			should_open = false
+		else:
+			var depth_a: int = _get_dead_end_depth(room_ids[0], room_graph)
+			var depth_b: int = _get_dead_end_depth(room_ids[1], room_graph)
+			if depth_a >= min_loop_dead_end_depth and depth_b >= min_loop_dead_end_depth:
+				# Both sides have deep dead-end arms → open the shortcut
+				should_open = true
+			else:
+				# Trivial loop → open only by chance
+				should_open = randf() < loop_passage_chance
+
+		_apply_passage_decision(component, potential_cells, should_open)
+
+		if should_open:
+			opened_count += 1
+		else:
+			blocked_count += 1
+
+	passages_resolved.emit(opened_count, blocked_count)
+	print("DungeonGenerator: Passage resolution (dead-end depth) — opened: %d, blocked: %d groups" % [opened_count, blocked_count])
+
+
+## Collects all POTENTIAL_PASSAGE cells from every placed room.
+## Returns: Vector2i (world pos) -> Array[{placement, x, y}]
+## A world position can have entries from two placements (blocked-cell overlap).
+func _collect_potential_passage_cells() -> Dictionary:
+	var result: Dictionary = {}
+
+	for placement: PlacedRoom in placed_rooms:
+		for y in range(placement.room.height):
+			for x in range(placement.room.width):
+				var cell: MetaCell = placement.room.get_cell(x, y)
+				if cell == null or cell.cell_type != MetaCell.CellType.POTENTIAL_PASSAGE:
+					continue
+				var world_pos: Vector2i = placement.get_cell_world_pos(x, y)
+				if not result.has(world_pos):
+					result[world_pos] = []
+				result[world_pos].append({"placement": placement, "x": x, "y": y})
+
+	return result
+
+
+## Groups POTENTIAL_PASSAGE cells into 4-connected components via BFS flood-fill.
+## Returns an Array of components; each component is an Array[Vector2i].
+func _find_passage_components(potential_cells: Dictionary) -> Array:
+	var visited: Dictionary = {}
+	var components: Array = []
+
+	for start_pos: Vector2i in potential_cells.keys():
+		if visited.has(start_pos):
+			continue
+
+		var component: Array[Vector2i] = []
+		var queue: Array[Vector2i] = [start_pos]
+
+		while not queue.is_empty():
+			var pos: Vector2i = queue.pop_front()
+			if visited.has(pos) or not potential_cells.has(pos):
+				continue
+			visited[pos] = true
+			component.append(pos)
+			for direction: MetaCell.Direction in DIRECTIONS:
+				queue.append(pos + _get_direction_offset(direction))
+
+		if not component.is_empty():
+			components.append(component)
+
+	return components
+
+
+## Returns the unique room positions (Vector2i, used as node IDs) for every PlacedRoom
+## whose FLOOR or PASSAGE cells are directly adjacent to the given component.
+## component_set is a pre-built Dictionary of the component's world positions for O(1) lookup.
+func _find_adjacent_room_ids(component: Array[Vector2i], component_set: Dictionary) -> Array:
+	var found: Dictionary = {}
+	for pos: Vector2i in component:
+		for direction: MetaCell.Direction in DIRECTIONS:
+			var neighbor: Vector2i = pos + _get_direction_offset(direction)
+			if component_set.has(neighbor) or not occupied_cells.has(neighbor):
+				continue
+			var pl: PlacedRoom = occupied_cells[neighbor]
+			var cell: MetaCell = _get_cell_at_world_pos(pl, neighbor)
+			if cell != null and (cell.cell_type == MetaCell.CellType.FLOOR or cell.cell_type == MetaCell.CellType.PASSAGE):
+				found[pl.position] = true
+	return found.keys()
+
+
+## Applies the PASSAGE or BLOCKED decision to every cell in a component.
+## Updates all placements that own a cell at each world position in the component.
+func _apply_passage_decision(component: Array[Vector2i], potential_cells: Dictionary, open: bool) -> void:
+	var new_type: MetaCell.CellType = MetaCell.CellType.PASSAGE if open else MetaCell.CellType.BLOCKED
+
+	for world_pos: Vector2i in component:
+		if not potential_cells.has(world_pos):
+			continue
+		for entry: Dictionary in potential_cells[world_pos]:
+			var cell: MetaCell = (entry["placement"] as PlacedRoom).room.get_cell(entry["x"], entry["y"])
+			if cell != null and cell.cell_type == MetaCell.CellType.POTENTIAL_PASSAGE:
+				cell.cell_type = new_type
+
+
+## Builds the confirmed room adjacency graph from PASSAGE cells only.
+## Two placements are connected when they both own a PASSAGE cell at the same world position.
+## Returns: Dictionary(room_pos: Vector2i → Dictionary(neighbor_pos: Vector2i → true))
+func _build_room_graph() -> Dictionary:
+	var graph: Dictionary = {}
+	for pl: PlacedRoom in placed_rooms:
+		if not graph.has(pl.position):
+			graph[pl.position] = {}
+
+	# Map each world position that has a PASSAGE cell to every placement that owns it.
+	var pos_to_rooms: Dictionary = {}
+	for placement: PlacedRoom in placed_rooms:
+		for y in range(placement.room.height):
+			for x in range(placement.room.width):
+				var cell: MetaCell = placement.room.get_cell(x, y)
+				if cell == null or cell.cell_type != MetaCell.CellType.PASSAGE:
+					continue
+				var world_pos: Vector2i = placement.get_cell_world_pos(x, y)
+				if not pos_to_rooms.has(world_pos):
+					pos_to_rooms[world_pos] = []
+				pos_to_rooms[world_pos].append(placement.position)
+
+	# Each world position shared by 2+ placements creates an edge in the graph.
+	for world_pos: Vector2i in pos_to_rooms:
+		var room_list: Array = pos_to_rooms[world_pos]
+		for i in range(room_list.size()):
+			for j in range(i + 1, room_list.size()):
+				var a: Vector2i = room_list[i]
+				var b: Vector2i = room_list[j]
+				if not graph.has(a):
+					graph[a] = {}
+				if not graph.has(b):
+					graph[b] = {}
+				graph[a][b] = true
+				graph[b][a] = true
+
+	return graph
+
+
+## Returns the maximum dead-end chain depth reachable from start_id in room_graph.
+## Traversal follows rooms with degree <= 2 (dead ends and corridors).
+## At depth > 0, rooms with degree > 2 (junctions / hubs) end the chain without counting.
+## This measures how many rooms deep a player would be trapped in a dead-end arm.
+##
+## Uses a DFS with a best_depth table: rooms can be revisited if a greater depth is found,
+## ensuring the true maximum is always discovered. parent_id (null for the start node)
+## prevents backtracking to the immediate predecessor so the search stays directional.
+func _get_dead_end_depth(start_id: Vector2i, room_graph: Dictionary) -> int:
+	if not room_graph.has(start_id):
+		return 0
+	var max_depth: int = 0
+	# DFS stack: [room_id, parent_id (null or Vector2i), depth]
+	# Rooms may be pushed multiple times; best_depth ensures we only do useful work.
+	var stack: Array = [[start_id, null, 0]]
+	# Track the deepest depth at which each room was processed.
+	# A room is reprocessed only when a greater depth is found, guaranteeing the true maximum.
+	var best_depth: Dictionary = {}
+
+	while not stack.is_empty():
+		var entry: Array = stack.pop_back()
+		var room_id: Vector2i = entry[0]
+		var parent_id = entry[1]  # null (start) or Vector2i (predecessor)
+		var depth: int = entry[2]
+
+		# Skip if we already processed this room at an equal or greater depth.
+		if best_depth.has(room_id) and best_depth[room_id] >= depth:
+			continue
+		best_depth[room_id] = depth
+
+		var degree: int = room_graph[room_id].size()
+
+		# At depth > 0, stop traversal when we hit a junction (hub room).
+		# The junction is not counted — it marks the boundary of the dead-end arm.
+		if depth > 0 and degree > 2:
+			continue
+
+		max_depth = maxi(max_depth, depth)
+
+		for neighbor_id: Vector2i in (room_graph[room_id] as Dictionary).keys():
+			if neighbor_id != parent_id:
+				stack.append([neighbor_id, room_id, depth + 1])
+
+	return max_depth

@@ -19,6 +19,8 @@ extends Node2D
 var generator: DungeonGenerator
 var cached_cell_count: int = 0
 var cached_active_walker_count: int = 0  # Cache active walker count
+var cached_passages_opened: int = 0       # Passage groups opened in last resolution
+var cached_passages_blocked: int = 0      # Passage groups blocked in last resolution
 var walker_positions: Dictionary = {}  # walker_id -> current position
 var visible_walker_paths: Dictionary = {}  # walker_id -> bool (which paths to show)
 var room_position_cache: Dictionary = {}  # Vector2i -> PlacedRoom (for O(1) lookups)
@@ -54,6 +56,7 @@ func _ready() -> void:
 	generator.room_placed.connect(_on_room_placed)
 	generator.walker_moved.connect(_on_walker_moved)
 	generator.generation_step.connect(_on_generation_step)
+	generator.passages_resolved.connect(_on_passages_resolved)
 	
 	# Connect toggle all button
 	var toggle_all_button = get_node_or_null("../CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer/ToggleAllButton")
@@ -122,6 +125,12 @@ func _on_generation_complete(success: bool, room_count: int, cell_count: int) ->
 	cached_cell_count = cell_count
 	_update_walker_count()
 	_build_room_position_cache()
+	queue_redraw()
+
+
+func _on_passages_resolved(opened: int, blocked: int) -> void:
+	cached_passages_opened = opened
+	cached_passages_blocked = blocked
 	queue_redraw()
 
 
@@ -565,7 +574,8 @@ func _draw_statistics(bounds: Rect2i) -> void:
 		"Bounds: %d x %d" % [bounds.size.x, bounds.size.y],
 		"Active Walkers: %d / %d" % [cached_active_walker_count, generator.num_walkers],
 		"Compactness Bias: %.1f" % generator.compactness_bias,
-		"Seed: %d" % generator.generation_seed
+		"Seed: %d" % generator.generation_seed,
+		"Passages: +%d / -%d (chance %.0f%%)" % [cached_passages_opened, cached_passages_blocked, generator.loop_passage_chance * 100]
 	]
 	
 	for i in range(stats.size()):

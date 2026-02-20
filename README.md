@@ -105,7 +105,46 @@ Room A    +    Room B    =    Combined (5 cells, not 6)
 	   [■] = Shared blocked cell (overlap)
 ```
 
-### 5. Resource Cloning and Safe Modifications
+### 5. POTENTIAL_PASSAGE Resolution (Post-Processing)
+
+After meta-room generation completes, a dedicated post-processing step evaluates every remaining `POTENTIAL_PASSAGE` cell and decides whether it becomes a walkable `PASSAGE` or a solid `BLOCKED` cell.
+
+#### How It Works
+
+`POTENTIAL_PASSAGE` cells arise wherever two rooms share an overlapping BLOCKED cell that carries facing connections (e.g. `←` meets `→`). The walker algorithm already upgrades the connection cells it *actively traverses* to `PASSAGE`. All remaining `POTENTIAL_PASSAGE` cells are candidates for this step.
+
+Because the walker algorithm guarantees full dungeon connectivity, every remaining `POTENTIAL_PASSAGE` group is an **optional loop shortcut**. The resolver groups them into **4-connected components** and decides each one using the **dead-end depth** of both sides:
+
+| Case | Decision |
+|------|----------|
+| Component touches < 2 distinct rooms | Always `BLOCKED` — dead-end stub, no two rooms to connect |
+| `depth_a >= min_loop_dead_end_depth` AND `depth_b >= min_loop_dead_end_depth` | `PASSAGE` — meaningful shortcut rescuing deep dead-end arms on both sides |
+| Otherwise (trivial or shallow loop) | `BLOCKED` or `PASSAGE` with `loop_passage_chance` probability |
+
+**Dead-end depth** for a room is the longest chain reachable from that room while traversing only rooms with degree ≤ 2 (dead-end rooms and corridors). Traversal stops when it hits a junction room (degree > 2). This directly measures how deep a player would be stuck in a dead-end arm.
+
+**Example:** A passage connecting two dead-end corridors of 4 rooms each has depth 3 on each side. With `min_loop_dead_end_depth = 2` (default) it would be opened; with `min_loop_dead_end_depth = 4` it would not.
+
+#### Signal
+
+```gdscript
+signal passages_resolved(opened_count: int, blocked_count: int)
+```
+
+Emitted when resolution finishes. `opened_count` and `blocked_count` are the number of passage *groups* (not individual cells) that were opened or blocked.
+
+#### Configuration
+
+- `min_loop_dead_end_depth` — minimum dead-end chain depth required on **both** sides to auto-open a passage (default: `2`, range: 1–10).
+- `loop_passage_chance` — probability (0.0–1.0) that a **shallow/trivial** loop is opened anyway (default: `0.1`).
+
+```gdscript
+generator.min_loop_dead_end_depth = 3  # Require 4-room-deep dead ends on both sides
+generator.loop_passage_chance = 0.05   # Almost never open shallow loops
+```
+
+
+### 6. Resource Cloning and Safe Modifications
 
 To enable safe modifications during dungeon generation (like setting cell types to DOOR at connection points), the generator **clones all rooms before placement**:
 
@@ -129,7 +168,7 @@ This allows you to safely implement features like:
 - Modifying cell properties during placement
 - Implementing custom room merging logic
 
-### 6. Multi-Walker Dungeon Generation Algorithm
+### 7. Multi-Walker Dungeon Generation Algorithm
 
 The generator uses a **multi-walker room placement algorithm** that creates more organic, interconnected dungeons:
 
@@ -197,6 +236,8 @@ The generator uses a **multi-walker room placement algorithm** that creates more
 - `max_placement_attempts_per_room`: Tries per room placement (default: 10)
 - `target_meta_cell_count`: Stop when this many cells are placed (default: 500)
 - `compactness_bias`: How compact dungeons are (0.0 = random, 1.0 = very compact, default: 0.3)
+- **`min_loop_dead_end_depth`**: Minimum dead-end depth on both sides to auto-open a loop passage (default: 2)
+- **`loop_passage_chance`**: Probability to open shallow/trivial loop passages in post-processing (0.0–1.0, default: 0.1)
 
 This algorithm creates dungeons with:
 - More organic layouts (multiple growth points)

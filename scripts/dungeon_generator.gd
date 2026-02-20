@@ -215,6 +215,7 @@ func generate() -> bool:
 	
 	# Main generation loop - continue until target cell count is reached
 	var iterations = 0
+	var all_rooms_enclosed := false
 	
 	while _count_total_cells() < target_meta_cell_count and iterations < max_iterations:
 		iterations += 1
@@ -246,9 +247,22 @@ func generate() -> bool:
 			if not walker.is_alive:
 				_respawn_walker(walker)
 			
+			# If the walker is still dead after respawn, all rooms are fully enclosed.
+			# No further progress is possible - stop generation immediately.
+			if not walker.is_alive:
+				all_rooms_enclosed = true
+				break
+			
 			# Check if we've reached target cell count
 			if _count_total_cells() >= target_meta_cell_count:
 				break
+		
+		if all_rooms_enclosed:
+			push_warning(
+				"DungeonGenerator: All rooms are fully enclosed, stopping early at %d/%d cells." \
+				% [_count_total_cells(), target_meta_cell_count]
+			)
+			break
 	
 	var cell_count = _count_total_cells()
 	var success = cell_count >= target_meta_cell_count

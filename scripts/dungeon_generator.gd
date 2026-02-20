@@ -215,16 +215,15 @@ func generate() -> bool:
 	
 	# Main generation loop - continue until target cell count is reached
 	var iterations = 0
-	var all_rooms_enclosed := false
-	var consecutive_no_progress := 0
-	# Maximum consecutive iterations without placing any cell before giving up.
-	# Prevents long busy-loops when rooms exist with open connections but no template fits.
-	const MAX_NO_PROGRESS_ITERATIONS := 100
+	var all_rooms_exhausted := false
+	# Rooms where _walker_try_place_room already tested every template+rotation and failed.
+	# These are skipped during teleportation.  Cleared whenever a new room is placed because
+	# the dungeon layout changed and a previously impossible position might now be reachable.
+	var exhausted_rooms: Dictionary = {}  # Set<PlacedRoom>: rooms that no template can expand
 	
 	var current_cells := _count_total_cells()
 	while current_cells < target_meta_cell_count and iterations < max_iterations:
 		iterations += 1
-		var cells_at_start := current_cells
 		
 		# Emit step signal for visualization
 		generation_step.emit(iterations, current_cells)
@@ -247,44 +246,37 @@ func generate() -> bool:
 				# Update cached cell count only when a room was actually placed
 				current_cells = _count_total_cells()
 				
+				# A new room changed the dungeon layout; previously impossible rooms may now work
+				exhausted_rooms.clear()
+				
 				# Wait for visualization if enabled
 				if enable_visualization and visualization_step_delay > 0:
 					await get_tree().create_timer(visualization_step_delay).timeout
 			else:
+				# This room has been fully tried (all templates × rotations × connections failed).
+				# Mark it so the teleport logic skips it until the layout changes.
+				exhausted_rooms[walker.current_room] = true
 				walker.is_alive = false
 				
 			if not walker.is_alive:
-				_respawn_walker(walker)
+				_respawn_walker(walker, exhausted_rooms)
 			
-			# If the walker is still dead after respawn, no room has an open connection.
-			# No further progress is possible - stop generation immediately.
+			# Walker is still dead → _get_random_room_with_open_connections found nothing outside
+			# exhausted_rooms.  Every expandable room has been tried: stop generation.
 			if not walker.is_alive:
-				all_rooms_enclosed = true
+				all_rooms_exhausted = true
 				break
 			
 			# Check if we've reached target cell count
 			if current_cells >= target_meta_cell_count:
 				break
 		
-		if all_rooms_enclosed:
+		if all_rooms_exhausted:
 			push_warning(
-				"DungeonGenerator: All rooms are fully enclosed, stopping early at %d/%d cells." \
-				% [current_cells, target_meta_cell_count]
+				"DungeonGenerator: All rooms with open connections are exhausted, " \
+				+ "stopping early at %d/%d cells." % [current_cells, target_meta_cell_count]
 			)
 			break
-		
-		# Detect when walkers keep teleporting without placing anything.
-		# This happens when open connections exist but no template fits due to layout constraints.
-		if current_cells == cells_at_start:
-			consecutive_no_progress += 1
-			if consecutive_no_progress >= MAX_NO_PROGRESS_ITERATIONS:
-				push_warning(
-					"DungeonGenerator: No progress for %d iterations, stopping early at %d/%d cells." \
-					% [MAX_NO_PROGRESS_ITERATIONS, current_cells, target_meta_cell_count]
-				)
-				break
-		else:
-			consecutive_no_progress = 0
 	
 	var cell_count = current_cells
 	var success = cell_count >= target_meta_cell_count
@@ -445,9 +437,10 @@ func _walker_try_place_room(walker: Walker) -> bool:
 ## Respawns a walker by teleporting it to a random room with open connections.
 ## Always teleports – staying at the current position is not useful since the walker
 ## just proved it cannot place a room there.
-func _respawn_walker(walker: Walker) -> void:
+## Rooms listed in excluded_rooms (already tried and failed) are skipped.
+func _respawn_walker(walker: Walker, excluded_rooms: Dictionary = {}) -> void:
 	var old_pos = walker.current_room.position
-	var spawn_target = _get_random_room_with_open_connections()
+	var spawn_target = _get_random_room_with_open_connections(excluded_rooms)
 	if spawn_target != null:
 		walker.current_room = spawn_target
 		walker.rooms_placed = 0
@@ -489,12 +482,15 @@ func _count_occupied_connections(placement: PlacedRoom) -> int:
 	return count
 
 
-## Gets a random placed room that has at least one open connection
-## Prioritizes dead-end rooms (exactly one occupied connection = one entrance)
-func _get_random_room_with_open_connections() -> PlacedRoom:
+## Gets a random placed room that has at least one open connection.
+## Prioritizes dead-end rooms (exactly one occupied connection = one entrance).
+## Rooms in excluded_rooms are skipped (already proved no template fits there).
+func _get_random_room_with_open_connections(excluded_rooms: Dictionary = {}) -> PlacedRoom:
 	var rooms_with_open: Array[PlacedRoom] = []
 	
 	for placement in placed_rooms:
+		if excluded_rooms.has(placement):
+			continue
 		if not _get_open_connections(placement).is_empty():
 			rooms_with_open.append(placement)
 	

@@ -106,10 +106,17 @@ class RequiredRoomLink:
 ## Directional bias for more compact dungeons (0 = no bias, 1 = strong bias towards center)
 @export_range(0.0, 1.0) var compactness_bias: float = 0.3
 
-## Probability that a non-MST POTENTIAL_PASSAGE group is opened as an optional loop passage.
-## MST-selected passage groups are always opened to form the minimal shortcut structure.
-## Range: 0.0 = no extra loops, 1.0 = all extra loops opened (default: 0.35)
-@export_range(0.0, 1.0) var loop_passage_chance: float = 0.35
+## Probability that a POTENTIAL_PASSAGE group is opened when neither side has a deep enough
+## dead-end chain. Applies only to shallow / trivial loops.
+## Range: 0.0 = never open shallow loops, 1.0 = always open (default: 0.1)
+@export_range(0.0, 1.0) var loop_passage_chance: float = 0.1
+
+## Minimum dead-end chain depth required on BOTH sides of a POTENTIAL_PASSAGE group
+## for it to be opened automatically as a loop passage.
+## A depth of N means at least N rooms with degree ≤ 2 must be reachable in an unbroken
+## chain from the passage entrance on each side before hitting a junction.
+## Example: depth 2 → chain of 3 rooms (entrance + 2 further rooms) required on each side.
+@export_range(1, 10) var min_loop_dead_end_depth: int = 2
 
 ## Maximum recursion depth when validating required connections
 ## Limits how many chained required connections can be validated
@@ -901,21 +908,25 @@ func _get_random_room_with_open_connections_compact() -> PlacedRoom:
 
 
 # ---------------------------------------------------------------------------
-# Post-processing: POTENTIAL_PASSAGE resolution via Minimum Spanning Tree
+# Post-processing: POTENTIAL_PASSAGE resolution via Dead-End Depth
 # ---------------------------------------------------------------------------
 
 ## Resolves all remaining POTENTIAL_PASSAGE cells after meta-room generation.
 ##
-## Because the walker algorithm guarantees full connectivity, every remaining
-## POTENTIAL_PASSAGE group is an optional shortcut. The selection uses Kruskal's
-## Minimum Spanning Tree algorithm on a graph where:
-##   - Nodes  = PlacedRooms (identified by world position)
-##   - Edges  = POTENTIAL_PASSAGE components connecting two distinct rooms
-##   - Weight = cell count of the component (smaller passages are preferred)
+## Every remaining POTENTIAL_PASSAGE group is an optional loop shortcut because
+## the walker algorithm already guarantees full dungeon connectivity.
+## The decision uses the dead-end depth of both sides of the potential passage:
 ##
-## MST edges  → always opened as PASSAGE (minimal spanning shortcut structure).
-## Non-MST edges → opened with loop_passage_chance probability (optional loops).
-## Components with fewer than 2 distinct adjacent rooms → always blocked.
+##   depth_a = longest dead-end chain reachable from the room adjacent on side A
+##   depth_b = longest dead-end chain reachable from the room adjacent on side B
+##
+##   depth_a >= min_loop_dead_end_depth AND depth_b >= min_loop_dead_end_depth
+##     → PASSAGE  (meaningful shortcut rescuing deep dead-end arms on both sides)
+##   otherwise
+##     → BLOCKED with probability (1 - loop_passage_chance)
+##       (trivial loop; only opened by chance for occasional variety)
+##
+##   Components touching fewer than 2 distinct rooms → always BLOCKED (dead-end stub).
 ##
 ## Emits passages_resolved(opened_count, blocked_count) when done.
 func resolve_potential_passages() -> void:
@@ -926,11 +937,10 @@ func resolve_potential_passages() -> void:
 		return
 
 	var components: Array = _find_passage_components(potential_cells)
+	var room_graph: Dictionary = _build_room_graph()
 
-	# --- Build edge list for Kruskal's MST ---
-	# edge dict: { index: int, a: Vector2i, b: Vector2i, weight: int }
-	var edges: Array = []
-	var component_room_ids: Array = []  # parallel to components
+	var opened_count: int = 0
+	var blocked_count: int = 0
 
 	for i: int in range(components.size()):
 		var component: Array[Vector2i] = components[i]
@@ -939,45 +949,22 @@ func resolve_potential_passages() -> void:
 			component_set[pos] = true
 
 		var room_ids: Array = _find_adjacent_room_ids(component, component_set)
-		component_room_ids.append(room_ids)
 
-		# Create one edge for every distinct pair of adjacent rooms.
-		# A component touching 3+ rooms (rare) produces multiple edges, all sharing
-		# the same component index so any MST pick opens the whole component.
-		for j: int in range(room_ids.size()):
-			for k: int in range(j + 1, room_ids.size()):
-				edges.append({"index": i, "a": room_ids[j], "b": room_ids[k], "weight": component.size()})
-
-	# --- Kruskal's MST: sort edges by weight, union rooms greedily ---
-	edges.sort_custom(func(x: Dictionary, y: Dictionary) -> bool: return x.weight < y.weight)
-
-	# Initialize Union-Find with every room referenced by an edge
-	var uf: Dictionary = {}
-	for edge: Dictionary in edges:
-		if not uf.has(edge.a):
-			uf[edge.a] = edge.a
-		if not uf.has(edge.b):
-			uf[edge.b] = edge.b
-
-	var mst_indices: Dictionary = {}  # component index -> true (is MST edge)
-	for edge: Dictionary in edges:
-		if _uf_union(uf, edge.a, edge.b):
-			mst_indices[edge.index] = true
-
-	# --- Apply decisions to every component ---
-	var opened_count: int = 0
-	var blocked_count: int = 0
-
-	for i: int in range(components.size()):
 		var should_open: bool
-		if component_room_ids[i].size() < 2:
-			should_open = false  # Dead-end stub: no two distinct rooms to connect
-		elif mst_indices.has(i):
-			should_open = true   # MST edge: forms the minimal shortcut structure
+		if room_ids.size() < 2:
+			# Dead-end stub: no two distinct rooms to connect → always block
+			should_open = false
 		else:
-			should_open = randf() < loop_passage_chance  # Optional extra loop
+			var depth_a: int = _get_dead_end_depth(room_ids[0], room_graph)
+			var depth_b: int = _get_dead_end_depth(room_ids[1], room_graph)
+			if depth_a >= min_loop_dead_end_depth and depth_b >= min_loop_dead_end_depth:
+				# Both sides have deep dead-end arms → open the shortcut
+				should_open = true
+			else:
+				# Trivial loop → open only by chance
+				should_open = randf() < loop_passage_chance
 
-		_apply_passage_decision(components[i], potential_cells, should_open)
+		_apply_passage_decision(component, potential_cells, should_open)
 
 		if should_open:
 			opened_count += 1
@@ -985,7 +972,7 @@ func resolve_potential_passages() -> void:
 			blocked_count += 1
 
 	passages_resolved.emit(opened_count, blocked_count)
-	print("DungeonGenerator: Passage resolution (MST) — opened: %d, blocked: %d groups" % [opened_count, blocked_count])
+	print("DungeonGenerator: Passage resolution (dead-end depth) — opened: %d, blocked: %d groups" % [opened_count, blocked_count])
 
 
 ## Collects all POTENTIAL_PASSAGE cells from every placed room.
@@ -1053,32 +1040,6 @@ func _find_adjacent_room_ids(component: Array[Vector2i], component_set: Dictiona
 	return found.keys()
 
 
-## Union-Find: iterative find with path compression.
-## Returns the root representative of x in the disjoint-set forest.
-func _uf_find(uf: Dictionary, x: Vector2i) -> Vector2i:
-	var root: Vector2i = x
-	while uf[root] != root:
-		root = uf[root]
-	# Path compression: point every node on the path directly to the root
-	var cur: Vector2i = x
-	while cur != root:
-		var nxt: Vector2i = uf[cur]
-		uf[cur] = root
-		cur = nxt
-	return root
-
-
-## Union-Find: unite the sets containing a and b.
-## Returns true if they were in different sets (edge is useful for MST), false otherwise.
-func _uf_union(uf: Dictionary, a: Vector2i, b: Vector2i) -> bool:
-	var ra: Vector2i = _uf_find(uf, a)
-	var rb: Vector2i = _uf_find(uf, b)
-	if ra == rb:
-		return false
-	uf[ra] = rb
-	return true
-
-
 ## Applies the PASSAGE or BLOCKED decision to every cell in a component.
 ## Updates all placements that own a cell at each world position in the component.
 func _apply_passage_decision(component: Array[Vector2i], potential_cells: Dictionary, open: bool) -> void:
@@ -1091,3 +1052,88 @@ func _apply_passage_decision(component: Array[Vector2i], potential_cells: Dictio
 			var cell: MetaCell = (entry["placement"] as PlacedRoom).room.get_cell(entry["x"], entry["y"])
 			if cell != null and cell.cell_type == MetaCell.CellType.POTENTIAL_PASSAGE:
 				cell.cell_type = new_type
+
+
+## Builds the confirmed room adjacency graph from PASSAGE cells only.
+## Two placements are connected when they both own a PASSAGE cell at the same world position.
+## Returns: Dictionary(room_pos: Vector2i → Dictionary(neighbor_pos: Vector2i → true))
+func _build_room_graph() -> Dictionary:
+	var graph: Dictionary = {}
+	for pl: PlacedRoom in placed_rooms:
+		if not graph.has(pl.position):
+			graph[pl.position] = {}
+
+	# Map each world position that has a PASSAGE cell to every placement that owns it.
+	var pos_to_rooms: Dictionary = {}
+	for placement: PlacedRoom in placed_rooms:
+		for y in range(placement.room.height):
+			for x in range(placement.room.width):
+				var cell: MetaCell = placement.room.get_cell(x, y)
+				if cell == null or cell.cell_type != MetaCell.CellType.PASSAGE:
+					continue
+				var world_pos: Vector2i = placement.get_cell_world_pos(x, y)
+				if not pos_to_rooms.has(world_pos):
+					pos_to_rooms[world_pos] = []
+				pos_to_rooms[world_pos].append(placement.position)
+
+	# Each world position shared by 2+ placements creates an edge in the graph.
+	for world_pos: Vector2i in pos_to_rooms:
+		var room_list: Array = pos_to_rooms[world_pos]
+		for i in range(room_list.size()):
+			for j in range(i + 1, room_list.size()):
+				var a: Vector2i = room_list[i]
+				var b: Vector2i = room_list[j]
+				if not graph.has(a):
+					graph[a] = {}
+				if not graph.has(b):
+					graph[b] = {}
+				graph[a][b] = true
+				graph[b][a] = true
+
+	return graph
+
+
+## Returns the maximum dead-end chain depth reachable from start_id in room_graph.
+## Traversal follows rooms with degree <= 2 (dead ends and corridors).
+## At depth > 0, rooms with degree > 2 (junctions / hubs) end the chain without counting.
+## This measures how many rooms deep a player would be trapped in a dead-end arm.
+##
+## Uses a DFS with a best_depth table: rooms can be revisited if a greater depth is found,
+## ensuring the true maximum is always discovered. parent_id (null for the start node)
+## prevents backtracking to the immediate predecessor so the search stays directional.
+func _get_dead_end_depth(start_id: Vector2i, room_graph: Dictionary) -> int:
+	if not room_graph.has(start_id):
+		return 0
+	var max_depth: int = 0
+	# DFS stack: [room_id, parent_id (null or Vector2i), depth]
+	# Rooms may be pushed multiple times; best_depth ensures we only do useful work.
+	var stack: Array = [[start_id, null, 0]]
+	# Track the deepest depth at which each room was processed.
+	# A room is reprocessed only when a greater depth is found, guaranteeing the true maximum.
+	var best_depth: Dictionary = {}
+
+	while not stack.is_empty():
+		var entry: Array = stack.pop_back()
+		var room_id: Vector2i = entry[0]
+		var parent_id = entry[1]  # null (start) or Vector2i (predecessor)
+		var depth: int = entry[2]
+
+		# Skip if we already processed this room at an equal or greater depth.
+		if best_depth.has(room_id) and best_depth[room_id] >= depth:
+			continue
+		best_depth[room_id] = depth
+
+		var degree: int = room_graph[room_id].size()
+
+		# At depth > 0, stop traversal when we hit a junction (hub room).
+		# The junction is not counted — it marks the boundary of the dead-end arm.
+		if depth > 0 and degree > 2:
+			continue
+
+		max_depth = maxi(max_depth, depth)
+
+		for neighbor_id: Vector2i in (room_graph[room_id] as Dictionary).keys():
+			if neighbor_id != parent_id:
+				stack.append([neighbor_id, room_id, depth + 1])
+
+	return max_depth

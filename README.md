@@ -113,17 +113,17 @@ After meta-room generation completes, a dedicated post-processing step evaluates
 
 `POTENTIAL_PASSAGE` cells arise wherever two rooms share an overlapping BLOCKED cell that carries facing connections (e.g. `←` meets `→`). The walker algorithm already upgrades the connection cells it *actively traverses* to `PASSAGE`. All remaining `POTENTIAL_PASSAGE` cells are candidates for this step.
 
-Because the walker algorithm guarantees full dungeon connectivity, every remaining `POTENTIAL_PASSAGE` group is an **optional shortcut**. The resolver groups them into **4-connected components** and selects which to open using **Kruskal's Minimum Spanning Tree algorithm**:
+Because the walker algorithm guarantees full dungeon connectivity, every remaining `POTENTIAL_PASSAGE` group is an **optional loop shortcut**. The resolver groups them into **4-connected components** and decides each one using the **dead-end depth** of both sides:
 
-| Step | Action |
-|------|--------|
-| Build graph | Nodes = PlacedRooms, Edges = POTENTIAL_PASSAGE components connecting two distinct rooms, Weight = component cell count |
-| Kruskal's MST | Greedily add the smallest components that connect previously unconnected room pairs |
-| MST edges | Always opened as `PASSAGE` — form the minimal spanning shortcut structure |
-| Non-MST edges | Opened with `loop_passage_chance` probability (optional extra loops) |
-| No 2 distinct adjacent rooms | Always closed → `BLOCKED` (dead-end stubs) |
+| Case | Decision |
+|------|----------|
+| Component touches < 2 distinct rooms | Always `BLOCKED` — dead-end stub, no two rooms to connect |
+| `depth_a >= min_loop_dead_end_depth` AND `depth_b >= min_loop_dead_end_depth` | `PASSAGE` — meaningful shortcut rescuing deep dead-end arms on both sides |
+| Otherwise (trivial or shallow loop) | `BLOCKED` or `PASSAGE` with `loop_passage_chance` probability |
 
-Using the component cell count as edge weight means the MST prefers compact, single-cell passages over large multi-cell groups. This produces tight, purposeful shortcut corridors and limits the number of redundant loop passages to exactly what `loop_passage_chance` controls.
+**Dead-end depth** for a room is the longest chain reachable from that room while traversing only rooms with degree ≤ 2 (dead-end rooms and corridors). Traversal stops when it hits a junction room (degree > 2). This directly measures how deep a player would be stuck in a dead-end arm.
+
+**Example:** A passage connecting two dead-end corridors of 4 rooms each has depth 3 on each side. With `min_loop_dead_end_depth = 2` (default) it would be opened; with `min_loop_dead_end_depth = 4` it would not.
 
 #### Signal
 
@@ -135,10 +135,12 @@ Emitted when resolution finishes. `opened_count` and `blocked_count` are the num
 
 #### Configuration
 
-- `loop_passage_chance` — probability (0.0–1.0) that a non-MST loop passage is opened (default: `0.35`).
+- `min_loop_dead_end_depth` — minimum dead-end chain depth required on **both** sides to auto-open a passage (default: `2`, range: 1–10).
+- `loop_passage_chance` — probability (0.0–1.0) that a **shallow/trivial** loop is opened anyway (default: `0.1`).
 
 ```gdscript
-generator.loop_passage_chance = 0.5  # Open 50% of non-MST loop passages
+generator.min_loop_dead_end_depth = 3  # Require 4-room-deep dead ends on both sides
+generator.loop_passage_chance = 0.05   # Almost never open shallow loops
 ```
 
 
@@ -234,7 +236,8 @@ The generator uses a **multi-walker room placement algorithm** that creates more
 - `max_placement_attempts_per_room`: Tries per room placement (default: 10)
 - `target_meta_cell_count`: Stop when this many cells are placed (default: 500)
 - `compactness_bias`: How compact dungeons are (0.0 = random, 1.0 = very compact, default: 0.3)
-- **`loop_passage_chance`**: Probability to open optional loop passages in post-processing (0.0–1.0, default: 0.35)
+- **`min_loop_dead_end_depth`**: Minimum dead-end depth on both sides to auto-open a loop passage (default: 2)
+- **`loop_passage_chance`**: Probability to open shallow/trivial loop passages in post-processing (0.0–1.0, default: 0.1)
 
 This algorithm creates dungeons with:
 - More organic layouts (multiple growth points)

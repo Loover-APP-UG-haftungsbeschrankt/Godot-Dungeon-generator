@@ -13,6 +13,7 @@
 [ext_resource type="Resource" uid="uid://gme2xlqd47pm" path="res://resources/rooms/cross_room_big.tres" id="8_us072"]
 [ext_resource type="Texture2D" uid="uid://cwc4h5r0em2k5" path="res://assets/TX Tileset Grass.png" id="12_2x70e"]
 [ext_resource type="Texture2D" uid="uid://cgawatw6v507t" path="res://assets/TX Tileset Wall.png" id="13_s30kg"]
+[ext_resource type="Script" uid="uid://dtp1r3n4x8k2m" path="res://scripts/dungeon_tile_renderer.gd" id="15_tile"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_wcbbl"]
 texture = ExtResource("12_2x70e")
@@ -332,3 +333,4 @@ horizontal_alignment = 2
 
 [node name="Ground" type="TileMapLayer" parent="." unique_id=328729540]
 tile_set = SubResource("TileSet_uxkam")
+script = ExtResource("15_tile")

@@ -634,11 +634,13 @@ func _draw_zone_label(placement: DungeonGenerator.PlacedRoom, offset: Vector2) -
 	var zone_name = generator.get_zone_name(placement.zone)
 	var zone_color = generator.get_zone_color(placement.zone)
 	
-	# Build label text
-	var label_text = zone_name
+	# Build label text — transition rooms just show "TRANSITION"
+	var label_text: String
 	if placement.is_transition:
-		label_text += " [T]"
+		label_text = "TRANSITION"
 		zone_color = TRANSITION_COLOR
+	else:
+		label_text = zone_name
 	
 	var font = ThemeDB.fallback_font
 	var font_size = 9

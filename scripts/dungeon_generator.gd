@@ -1158,9 +1158,10 @@ func _assign_room_types() -> void:
 		return da < db
 	)
 
-	# Distribute EVENT rooms evenly across the eligible list
+	# Distribute EVENT rooms evenly, preferring non-adjacent placement
 	var event_placed: int = 0
 	var event_assigned_indices: Dictionary = {}
+	var event_positions: Dictionary = {}  # position -> true (for adjacency checks)
 	for j in range(event_room_count):
 		if event_assigned_indices.size() >= event_eligible.size():
 			break
@@ -1169,17 +1170,29 @@ func _assign_room_types() -> void:
 			target_idx = event_eligible.size() / 2
 		else:
 			target_idx = int(float(j) / float(event_room_count) * float(event_eligible.size()))
+		# First pass: find nearest unassigned index that is NOT adjacent to another EVENT
 		var best_idx: int = -1
 		var best_dist: int = event_eligible.size() + 1
 		for k in range(event_eligible.size()):
 			if not event_assigned_indices.has(k):
+				if _is_adjacent_to_assigned(event_eligible[k].position, event_positions, room_graph):
+					continue
 				var dist_to_target: int = absi(k - target_idx)
 				if dist_to_target < best_dist:
 					best_dist = dist_to_target
 					best_idx = k
+		# Fallback: relax adjacency if no non-adjacent candidate found
+		if best_idx < 0:
+			for k in range(event_eligible.size()):
+				if not event_assigned_indices.has(k):
+					var dist_to_target: int = absi(k - target_idx)
+					if dist_to_target < best_dist:
+						best_dist = dist_to_target
+						best_idx = k
 		if best_idx >= 0:
 			event_eligible[best_idx].room_type = RoomType.EVENT
 			event_assigned_indices[best_idx] = true
+			event_positions[event_eligible[best_idx].position] = true
 			event_placed += 1
 
 	if event_placed < event_room_count:

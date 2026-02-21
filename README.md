@@ -51,6 +51,7 @@ A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algori
 │   ├── room_rotator.gd        # Static methods for rotating rooms
 │   ├── dungeon_generator.gd   # Main generator using random walk
 │   ├── dungeon_visualizer.gd  # Visual debug renderer
+│   ├── dungeon_tile_renderer.gd  # Converts meta-cells to TileMap tiles
 │   └── camera_controller.gd   # Pan and zoom camera controls
 ├── resources/
 │   └── rooms/
@@ -355,6 +356,49 @@ See `addons/meta_room_editor/README.md` for detailed editor documentation.
    - Set cell_type (BLOCKED, FLOOR, DOOR)
    - Set connection flags for edge cells
 6. Save as `.tres` file in `resources/rooms/`
+
+### TileMap Rendering System
+
+The `DungeonTileRenderer` automatically converts generated meta-cells into TileMap tiles for visual display.
+
+#### How It Works
+
+1. **Automatic Rendering**: Connects to `DungeonGenerator.generation_complete` signal
+2. **Meta-Cell Expansion**: Each meta-cell becomes a 5×5 grid of tiles (configurable via `CELLS_PER_META` constant)
+3. **Floor Tiles**: Non-BLOCKED cells use grass tiles from TileSet source 0 (8×8 atlas) with deterministic variation
+4. **Wall Tiles**: BLOCKED cells could use wall tiles from source 1, but currently only floor cells are rendered
+5. **No Manual Setup**: Just attach the script to your TileMapLayer node
+
+#### Configuration
+
+The renderer uses these constants (defined in the script):
+
+```gdscript
+const CELLS_PER_META: int = 5        # Each meta-cell = 5×5 tiles
+const FLOOR_SOURCE_ID: int = 0       # Grass tileset (8×8 atlas, 32×32 tiles)
+const WALL_SOURCE_ID: int = 1        # Wall tileset (16×16 atlas, 32×32 tiles, with physics)
+const WALL_ATLAS_COORD: Vector2i = Vector2i(2, 3)  # Solid stone wall tile
+const FLOOR_ATLAS_SIZE: int = 8      # 8×8 grass palette
+```
+
+#### Setup in Your Scene
+
+1. Add a `TileMapLayer` node (e.g., named "Ground")
+2. Configure the TileSet with your tile sources (see `test_dungeon.tscn` for example)
+3. Attach `dungeon_tile_renderer.gd` script to the TileMapLayer
+4. Ensure `DungeonGenerator` is at `../DungeonGenerator` relative path
+
+The renderer will automatically:
+- Clear old tiles on new generation
+- Render all floor cells with grass tile variation
+- Scale the dungeon for visual display (meta-cells are abstract units, tiles are visual pixels)
+
+#### TileSet Requirements
+
+- **Source 0** (Floor): Atlas with grass/floor tiles (no physics required)
+- **Source 1** (Walls): Atlas with wall tiles and physics collision shapes
+
+See the `test_dungeon.tscn` file for a complete working example with configured TileSet sources.
 
 ### Using the Generator in Code
 

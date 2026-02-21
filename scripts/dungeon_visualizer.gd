@@ -32,6 +32,7 @@ var camera: Camera2D  # Reference to the camera for coordinate conversion
 # Constants for text positioning
 const TEXT_VERTICAL_OFFSET_FACTOR = 0.35  # Vertical centering factor for text in circles
 const STEP_TEXT_FONT_SIZE = 13  # Font size for step numbers
+const TRANSITION_COLOR = Color(1.0, 1.0, 0.0)  # Yellow color for transition room indicators
 
 
 func _ready() -> void:
@@ -559,7 +560,7 @@ func _draw_room(placement: DungeonGenerator.PlacedRoom, offset: Vector2) -> void
 			
 			# Draw transition border for transition rooms
 			if placement.is_transition and cell.cell_type == MetaCell.CellType.FLOOR:
-				draw_rect(Rect2(screen_pos, Vector2(cell_size, cell_size)), Color(1.0, 1.0, 0.0, 0.4), false, 2.0)
+				draw_rect(Rect2(screen_pos, Vector2(cell_size, cell_size)), Color(TRANSITION_COLOR, 0.4), false, 2.0)
 			
 			# Draw grid lines
 			if draw_grid:
@@ -637,7 +638,7 @@ func _draw_zone_label(placement: DungeonGenerator.PlacedRoom, offset: Vector2) -
 	var label_text = zone_name
 	if placement.is_transition:
 		label_text += " [T]"
-		zone_color = Color(1.0, 1.0, 0.0)  # Yellow for transitions
+		zone_color = TRANSITION_COLOR
 	
 	var font = ThemeDB.fallback_font
 	var font_size = 9
@@ -710,11 +711,9 @@ func _draw_statistics(bounds: Rect2i) -> void:
 			if pl.is_transition:
 				transition_count += 1
 		
-		var zone_y: float
+		var zone_y: float = stats_pos.y + stats.size() * line_height + 5
 		if not type_counts.is_empty():
-			zone_y = stats_pos.y + stats.size() * line_height + 5 + type_counts.size() * line_height + 5
-		else:
-			zone_y = stats_pos.y + stats.size() * line_height + 5
+			zone_y += type_counts.size() * line_height + 5
 		
 		draw_string(font, Vector2(stats_pos.x, zone_y), "-- Zones --", HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.GRAY)
 		zone_y += line_height
@@ -733,7 +732,7 @@ func _draw_statistics(bounds: Rect2i) -> void:
 			draw_string(font, Vector2(stats_pos.x, zone_y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, config.color)
 			zone_y += line_height
 		
-		draw_string(font, Vector2(stats_pos.x, zone_y), "Transitions: %d" % transition_count, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(1.0, 1.0, 0.0))
+		draw_string(font, Vector2(stats_pos.x, zone_y), "Transitions: %d" % transition_count, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, TRANSITION_COLOR)
 		zone_y += line_height
 
 

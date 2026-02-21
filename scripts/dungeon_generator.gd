@@ -1284,12 +1284,12 @@ func _assign_zones() -> void:
 		pl.zone = 0
 		pl.is_transition = false
 
-	if zone_configs.is_empty():
+	if zone_configs.is_empty() or placed_rooms.is_empty():
 		zones_assigned.emit()
 		return
 
 	var room_graph: Dictionary = _build_room_graph()
-	var entrance_pos: Vector2i = placed_rooms[0].position if not placed_rooms.is_empty() else Vector2i.ZERO
+	var entrance_pos: Vector2i = placed_rooms[0].position
 	var rooms_by_distance: Array[Vector2i] = _bfs_rooms_by_distance(entrance_pos, room_graph)
 
 	# Build position -> PlacedRoom lookup

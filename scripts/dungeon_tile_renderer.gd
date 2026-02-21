@@ -3,7 +3,7 @@ extends TileMapLayer
 
 ## DungeonTileRenderer converts meta-cells from the DungeonGenerator into actual TileMap tiles.
 ## Each meta-cell is expanded into a 5x5 grid of tiles.
-## Floor cells use grass tiles from source 0, walls use solid stone tiles from source 1.
+## Currently only renders floor cells (non-BLOCKED). Wall rendering can be added later.
 
 ## Number of TileMap tiles per meta-cell dimension (5x5 = 25 tiles per meta-cell)
 const CELLS_PER_META: int = 5
@@ -11,14 +11,14 @@ const CELLS_PER_META: int = 5
 ## TileSet source ID for floor/grass tiles (256x256, 8x8 atlas)
 const FLOOR_SOURCE_ID: int = 0
 
-## TileSet source ID for wall tiles (512x512, 16x16 atlas with physics)
-const WALL_SOURCE_ID: int = 1
-
-## Atlas coordinate for wall tiles - solid stone wall at (2,3)
-const WALL_ATLAS_COORD: Vector2i = Vector2i(2, 3)
-
 ## Atlas size for floor tiles (8x8 grass palette)
 const FLOOR_ATLAS_SIZE: int = 8
+
+## TileSet source ID for wall tiles (reserved for future use)
+const WALL_SOURCE_ID: int = 1
+
+## Atlas coordinate for wall tiles (reserved for future use)
+const WALL_ATLAS_COORD: Vector2i = Vector2i(2, 3)
 
 ## Reference to the DungeonGenerator node
 var dungeon_generator: Node = null
@@ -56,8 +56,8 @@ func _render_dungeon() -> void:
 	if dungeon_generator == null:
 		return
 	
-	# Build a dictionary of world positions -> is_floor (true = floor, false = wall)
-	var tile_map: Dictionary = {}
+	# Build a dictionary of meta-cell world positions that should be rendered as floor
+	var floor_meta_cells: Dictionary = {}
 	
 	# Get placed_rooms from the generator
 	var placed_rooms: Array = dungeon_generator.placed_rooms
@@ -66,7 +66,7 @@ func _render_dungeon() -> void:
 		push_warning("DungeonTileRenderer: No placed rooms to render")
 		return
 	
-	# First pass: mark all floor cells
+	# First pass: mark all floor cells (non-BLOCKED cells)
 	for placement in placed_rooms:
 		var meta_room = placement.room
 		
@@ -82,26 +82,20 @@ func _render_dungeon() -> void:
 				var world_pos: Vector2i = placement.get_cell_world_pos(x, y)
 				
 				# Mark this meta-cell position as floor
-				tile_map[world_pos] = true
+				floor_meta_cells[world_pos] = true
 	
 	# Second pass: expand meta-cells into tiles and render
-	for meta_pos in tile_map.keys():
-		var is_floor: bool = tile_map[meta_pos]
-		
+	for meta_pos in floor_meta_cells.keys():
 		# Each meta-cell becomes CELLS_PER_META x CELLS_PER_META tiles
 		for dy in range(CELLS_PER_META):
 			for dx in range(CELLS_PER_META):
 				var tile_pos: Vector2i = meta_pos * CELLS_PER_META + Vector2i(dx, dy)
 				
-				if is_floor:
-					# Floor tile: use grass atlas with deterministic variation
-					var atlas_coord: Vector2i = _get_floor_atlas_coord(tile_pos)
-					set_cell(tile_pos, FLOOR_SOURCE_ID, atlas_coord)
-				else:
-					# Wall tile: use solid stone wall
-					set_cell(tile_pos, WALL_SOURCE_ID, WALL_ATLAS_COORD)
+				# Floor tile: use grass atlas with deterministic variation
+				var atlas_coord: Vector2i = _get_floor_atlas_coord(tile_pos)
+				set_cell(tile_pos, FLOOR_SOURCE_ID, atlas_coord)
 	
-	print("DungeonTileRenderer: Rendered ", tile_map.size(), " meta-cells")
+	print("DungeonTileRenderer: Rendered ", floor_meta_cells.size(), " meta-cells")
 
 
 ## Returns a grass tile atlas coordinate based on tile position for deterministic variation

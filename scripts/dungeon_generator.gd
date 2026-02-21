@@ -75,6 +75,8 @@ class RequiredRoomLink:
 		to = p_to
 		needs_placement = p_needs_placement
 
+## Boss room template to place at the farthest point from the entrance
+@export var boss_room_template: MetaRoom = null
 
 ## Available room templates to use for generation
 @export var room_templates: Array[MetaRoom] = []
@@ -108,8 +110,8 @@ class RequiredRoomLink:
 
 ## Probability that a POTENTIAL_PASSAGE group is opened when neither side has a deep enough
 ## dead-end chain. Applies only to shallow / trivial loops.
-## Range: 0.0 = never open shallow loops, 1.0 = always open (default: 0.1)
-@export_range(0.0, 1.0) var loop_passage_chance: float = 0.1
+## Range: 0.0 = never open shallow loops, 1.0 = always open (default: 0.25)
+@export_range(0.0, 1.0) var loop_passage_chance: float = 0.25
 
 ## Minimum dead-end chain depth required on BOTH sides of a POTENTIAL_PASSAGE group
 ## for it to be opened automatically as a loop passage.
@@ -143,6 +145,9 @@ var active_walkers: Array[Walker] = []
 ## Counter for assigning unique walker IDs
 var next_walker_id: int = 0
 
+## The placed boss room (null if not placed or no boss_room_template set)
+var boss_room: PlacedRoom = null
+
 
 ## Signal emitted when generation completes
 ## Parameters: success (bool), room_count (int), cell_count (int)
@@ -164,6 +169,10 @@ signal walker_moved(walker: Walker, from_pos: Vector2i, to_pos: Vector2i, is_tel
 ## Signal emitted at each generation step (for visualization)
 ## Parameters: iteration (int), total_cells (int)
 signal generation_step(iteration: int, total_cells: int)
+
+## Signal emitted when the boss room is placed after generation
+## Parameters: placement (PlacedRoom)
+signal boss_room_placed(placement: PlacedRoom)
 
 
 ## Generates the dungeon using multi-walker algorithm
@@ -255,6 +264,10 @@ func generate() -> bool:
 	
 	# Post-processing: resolve remaining POTENTIAL_PASSAGE cells into PASSAGE or BLOCKED
 	resolve_potential_passages()
+	
+	# Place boss room at the farthest point from the entrance
+	if boss_room_template != null:
+		_place_boss_room()
 	
 	generation_complete.emit(success, placed_rooms.size(), cell_count)
 	
@@ -411,9 +424,9 @@ func _walker_try_place_room(walker: Walker) -> bool:
 func _respawn_walker(walker: Walker) -> void:
 	var old_pos = walker.current_room.position
 	
-	# 50% chance to spawn at current position if it has open connections
-	# 50% chance to spawn at a random other room
-	var should_spawn_at_current_position = randf() < 0.5
+	# 30% chance to spawn at current position if it has open connections
+	# 70% chance to spawn at a random other room (reduces linearity)
+	var should_spawn_at_current_position = randf() < 0.3
 	
 	if should_spawn_at_current_position and not _get_open_connections(walker.current_room).is_empty():
 		# Spawn at current position - not a teleport
@@ -806,6 +819,7 @@ func clear_dungeon() -> void:
 	occupied_cells.clear()
 	active_walkers.clear()
 	next_walker_id = 0
+	boss_room = null
 
 
 ## Gets the bounds of the generated dungeon
@@ -905,6 +919,83 @@ func _get_random_room_with_open_connections_compact() -> PlacedRoom:
 	
 	# Random selection
 	return rooms_with_open[randi() % rooms_with_open.size()]
+
+
+# ---------------------------------------------------------------------------
+# Boss room placement
+# ---------------------------------------------------------------------------
+
+## Places the boss room at the farthest reachable room from the entrance.
+## Uses BFS on the room graph to find the room with the greatest graph distance
+## from the first placed room (entrance at Vector2i.ZERO), then tries to connect
+## the boss room template at an open connection of that room.
+## Falls back to the next-farthest rooms if placement fails.
+func _place_boss_room() -> void:
+	if boss_room_template == null:
+		return
+
+	# Build the room graph after passages are resolved
+	var room_graph: Dictionary = _build_room_graph()
+
+	# BFS from the entrance (first placed room) to find rooms sorted by distance
+	var entrance_pos: Vector2i = placed_rooms[0].position
+	var rooms_by_distance: Array[Vector2i] = _bfs_rooms_by_distance(entrance_pos, room_graph)
+
+	# Try to place boss room starting from the farthest room
+	var rotations = RoomRotator.get_all_rotations()
+	for i in range(rooms_by_distance.size() - 1, -1, -1):
+		var target_pos: Vector2i = rooms_by_distance[i]
+
+		# Find the PlacedRoom at this position
+		var target_room: PlacedRoom = null
+		for pl in placed_rooms:
+			if pl.position == target_pos:
+				target_room = pl
+				break
+		if target_room == null:
+			continue
+
+		var open_conns = _get_open_connections(target_room)
+		if open_conns.is_empty():
+			continue
+
+		open_conns.shuffle()
+		for conn_point in open_conns:
+			rotations.shuffle()
+			for rotation in rotations:
+				var rotated_room = RoomRotator.rotate_room(boss_room_template, rotation)
+				var placement = _try_connect_room(target_room, conn_point, rotated_room, rotation, boss_room_template)
+				if placement != null:
+					_place_room(placement)
+					_mark_passage_at_connection(target_room, conn_point, placement)
+					boss_room = placement
+					boss_room_placed.emit(placement)
+					print("DungeonGenerator: Boss room placed at ", placement.position, " (graph index from entrance: ", i, " of ", rooms_by_distance.size(), " rooms)")
+					return
+
+	push_warning("DungeonGenerator: Could not place boss room — no suitable connection found")
+
+
+## BFS traversal from a starting room position through the room graph.
+## Returns an array of room positions ordered by ascending graph distance.
+func _bfs_rooms_by_distance(start_pos: Vector2i, room_graph: Dictionary) -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	var visited: Dictionary = {}
+	var queue: Array[Vector2i] = [start_pos]
+	visited[start_pos] = true
+
+	while not queue.is_empty():
+		var room_pos: Vector2i = queue.pop_front()
+		result.append(room_pos)
+
+		if not room_graph.has(room_pos):
+			continue
+		for neighbor: Vector2i in (room_graph[room_pos] as Dictionary).keys():
+			if not visited.has(neighbor):
+				visited[neighbor] = true
+				queue.append(neighbor)
+
+	return result
 
 
 # ---------------------------------------------------------------------------

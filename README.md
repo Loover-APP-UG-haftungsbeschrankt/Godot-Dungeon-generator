@@ -136,7 +136,7 @@ Emitted when resolution finishes. `opened_count` and `blocked_count` are the num
 #### Configuration
 
 - `min_loop_dead_end_depth` — minimum dead-end chain depth required on **both** sides to auto-open a passage (default: `2`, range: 1–10).
-- `loop_passage_chance` — probability (0.0–1.0) that a **shallow/trivial** loop is opened anyway (default: `0.1`).
+- `loop_passage_chance` — probability (0.0–1.0) that a **shallow/trivial** loop is opened anyway (default: `0.25`).
 
 ```gdscript
 generator.min_loop_dead_end_depth = 3  # Require 4-room-deep dead ends on both sides
@@ -237,7 +237,7 @@ The generator uses a **multi-walker room placement algorithm** that creates more
 - `target_meta_cell_count`: Stop when this many cells are placed (default: 500)
 - `compactness_bias`: How compact dungeons are (0.0 = random, 1.0 = very compact, default: 0.3)
 - **`min_loop_dead_end_depth`**: Minimum dead-end depth on both sides to auto-open a loop passage (default: 2)
-- **`loop_passage_chance`**: Probability to open shallow/trivial loop passages in post-processing (0.0–1.0, default: 0.1)
+- **`loop_passage_chance`**: Probability to open shallow/trivial loop passages in post-processing (0.0–1.0, default: 0.25)
 
 This algorithm creates dungeons with:
 - More organic layouts (multiple growth points)

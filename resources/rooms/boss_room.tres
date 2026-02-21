@@ -1,0 +1,184 @@
+[gd_resource type="Resource" script_class="MetaRoom" format=3 uid="uid://bosqvwseb2pw1"]
+
+[ext_resource type="Script" uid="uid://b8mln4ttmne08" path="res://scripts/meta_cell.gd" id="1_qxwa4"]
+[ext_resource type="Script" uid="uid://8fcsrahvylh8" path="res://scripts/meta_room.gd" id="2_q4hfy"]
+
+[sub_resource type="Resource" id="Resource_qxwa4"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_q4hfy"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_hgiv0"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_hm8sx"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_hgkwv"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_wftlt"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_04hax"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_nfm5o"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_e6075"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_0rrml"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_0o8yr"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_uvr1d"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_5wglt"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_r52r2"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_dccfu"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_g6b8x"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_3ki1g"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_bgqd4"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_5lfwi"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_m5tjm"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_2rn5o"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_tcjst"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_eqgxj"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_yqbai"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_jnqph"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_xqxgb"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_efu46"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_8f3ix"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_p5h88"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_jegyl"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_p44tv"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_0eeux"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_f1uk6"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_h38dk"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_hn50a"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_rd2u6"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_1n1oc"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_aq00j"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_ka06b"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_isqrn"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_we4un"]
+script = ExtResource("1_qxwa4")
+
+[sub_resource type="Resource" id="Resource_bs06n"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_lh2x7"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_w5x30"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_1casy"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_hgku1"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+connection_bottom = true
+connection_required = true
+
+[sub_resource type="Resource" id="Resource_tji8x"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_tt4oh"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_f28xg"]
+script = ExtResource("1_qxwa4")
+cell_type = 0
+
+[resource]
+script = ExtResource("2_q4hfy")
+width = 7
+height = 7
+cells = Array[ExtResource("1_qxwa4")]([SubResource("Resource_qxwa4"), SubResource("Resource_q4hfy"), SubResource("Resource_hgiv0"), SubResource("Resource_hm8sx"), SubResource("Resource_hgkwv"), SubResource("Resource_wftlt"), SubResource("Resource_04hax"), SubResource("Resource_nfm5o"), SubResource("Resource_e6075"), SubResource("Resource_0rrml"), SubResource("Resource_0o8yr"), SubResource("Resource_uvr1d"), SubResource("Resource_5wglt"), SubResource("Resource_r52r2"), SubResource("Resource_dccfu"), SubResource("Resource_g6b8x"), SubResource("Resource_3ki1g"), SubResource("Resource_bgqd4"), SubResource("Resource_5lfwi"), SubResource("Resource_m5tjm"), SubResource("Resource_2rn5o"), SubResource("Resource_tcjst"), SubResource("Resource_eqgxj"), SubResource("Resource_yqbai"), SubResource("Resource_jnqph"), SubResource("Resource_xqxgb"), SubResource("Resource_efu46"), SubResource("Resource_8f3ix"), SubResource("Resource_p5h88"), SubResource("Resource_jegyl"), SubResource("Resource_p44tv"), SubResource("Resource_0eeux"), SubResource("Resource_f1uk6"), SubResource("Resource_h38dk"), SubResource("Resource_hn50a"), SubResource("Resource_rd2u6"), SubResource("Resource_1n1oc"), SubResource("Resource_aq00j"), SubResource("Resource_ka06b"), SubResource("Resource_isqrn"), SubResource("Resource_we4un"), SubResource("Resource_bs06n"), SubResource("Resource_lh2x7"), SubResource("Resource_w5x30"), SubResource("Resource_1casy"), SubResource("Resource_hgku1"), SubResource("Resource_tji8x"), SubResource("Resource_tt4oh"), SubResource("Resource_f28xg")])
+room_name = "Boss Room"

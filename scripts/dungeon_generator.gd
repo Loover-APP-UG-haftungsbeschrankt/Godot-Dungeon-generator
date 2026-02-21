@@ -1061,8 +1061,15 @@ func _assign_room_types() -> void:
 		if dist >= min_chest_merchant_distance:
 			periphery_eligible.append(pl)
 
-	# Sort by BFS distance descending (farthest rooms first = edges)
+	# Sort by: dead-end rooms first (degree 1 in graph), then BFS distance descending.
+	# This ensures CHEST rooms (placed first via interleaving) land in dead-end rooms
+	# at the bottom of the room graph.
 	periphery_eligible.sort_custom(func(a: PlacedRoom, b: PlacedRoom) -> bool:
+		var deg_a: int = room_graph[a.position].size() if room_graph.has(a.position) else 0
+		var deg_b: int = room_graph[b.position].size() if room_graph.has(b.position) else 0
+		# Dead-end rooms (degree 1) come first
+		if (deg_a == 1) != (deg_b == 1):
+			return deg_a == 1
 		var da: int = distance_map.get(a.position, 0)
 		var db: int = distance_map.get(b.position, 0)
 		return da > db
@@ -1073,6 +1080,10 @@ func _assign_room_types() -> void:
 		push_warning("DungeonGenerator: Not enough rooms at distance >= %d for CHEST and MERCHANT. Relaxing distance constraint." % min_chest_merchant_distance)
 		periphery_eligible = eligible.duplicate()
 		periphery_eligible.sort_custom(func(a: PlacedRoom, b: PlacedRoom) -> bool:
+			var deg_a: int = room_graph[a.position].size() if room_graph.has(a.position) else 0
+			var deg_b: int = room_graph[b.position].size() if room_graph.has(b.position) else 0
+			if (deg_a == 1) != (deg_b == 1):
+				return deg_a == 1
 			var da: int = distance_map.get(a.position, 0)
 			var db: int = distance_map.get(b.position, 0)
 			return da > db
@@ -1220,9 +1231,9 @@ static func get_room_type_color(rtype: int) -> Color:
 		RoomType.BOSS:
 			return Color(1.0, 0.15, 0.15)  # Red
 		RoomType.EVENT:
-			return Color(1.0, 0.85, 0.0)   # Yellow
+			return Color(0.7, 0.3, 1.0)    # Purple
 		RoomType.CHEST:
-			return Color(1.0, 0.65, 0.0)   # Orange
+			return Color(1.0, 0.85, 0.0)   # Golden Yellow
 		RoomType.MERCHANT:
 			return Color(0.4, 0.9, 0.4)    # Green
 	return Color.WHITE

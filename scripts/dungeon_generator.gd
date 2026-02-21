@@ -108,15 +108,15 @@ class RequiredRoomLink:
 
 ## Probability that a POTENTIAL_PASSAGE group is opened when neither side has a deep enough
 ## dead-end chain. Applies only to shallow / trivial loops.
-## Range: 0.0 = never open shallow loops, 1.0 = always open (default: 0.1)
-@export_range(0.0, 1.0) var loop_passage_chance: float = 0.1
+## Range: 0.0 = never open shallow loops, 1.0 = always open (default: 0.35)
+@export_range(0.0, 1.0) var loop_passage_chance: float = 0.35
 
-## Minimum dead-end chain depth required on BOTH sides of a POTENTIAL_PASSAGE group
+## Minimum dead-end chain depth required on EITHER side of a POTENTIAL_PASSAGE group
 ## for it to be opened automatically as a loop passage.
 ## A depth of N means at least N rooms with degree ≤ 2 must be reachable in an unbroken
-## chain from the passage entrance on each side before hitting a junction.
-## Example: depth 2 → chain of 3 rooms (entrance + 2 further rooms) required on each side.
-@export_range(1, 10) var min_loop_dead_end_depth: int = 2
+## chain from the passage entrance on one side before hitting a junction.
+## Example: depth 1 → at least 1 room deep dead-end arm on one side triggers opening.
+@export_range(1, 10) var min_loop_dead_end_depth: int = 1
 
 ## Maximum recursion depth when validating required connections
 ## Limits how many chained required connections can be validated
@@ -411,9 +411,9 @@ func _walker_try_place_room(walker: Walker) -> bool:
 func _respawn_walker(walker: Walker) -> void:
 	var old_pos = walker.current_room.position
 	
-	# 50% chance to spawn at current position if it has open connections
-	# 50% chance to spawn at a random other room
-	var should_spawn_at_current_position = randf() < 0.5
+	# 30% chance to spawn at current position if it has open connections
+	# 70% chance to spawn at a random other room (reduces linearity)
+	var should_spawn_at_current_position = randf() < 0.3
 	
 	if should_spawn_at_current_position and not _get_open_connections(walker.current_room).is_empty():
 		# Spawn at current position - not a teleport
@@ -920,8 +920,8 @@ func _get_random_room_with_open_connections_compact() -> PlacedRoom:
 ##   depth_a = longest dead-end chain reachable from the room adjacent on side A
 ##   depth_b = longest dead-end chain reachable from the room adjacent on side B
 ##
-##   depth_a >= min_loop_dead_end_depth AND depth_b >= min_loop_dead_end_depth
-##     → PASSAGE  (meaningful shortcut rescuing deep dead-end arms on both sides)
+##   depth_a >= min_loop_dead_end_depth OR depth_b >= min_loop_dead_end_depth
+##     → PASSAGE  (meaningful shortcut rescuing a deep dead-end arm on at least one side)
 ##   otherwise
 ##     → BLOCKED with probability (1 - loop_passage_chance)
 ##       (trivial loop; only opened by chance for occasional variety)
@@ -957,8 +957,8 @@ func resolve_potential_passages() -> void:
 		else:
 			var depth_a: int = _get_dead_end_depth(room_ids[0], room_graph)
 			var depth_b: int = _get_dead_end_depth(room_ids[1], room_graph)
-			if depth_a >= min_loop_dead_end_depth and depth_b >= min_loop_dead_end_depth:
-				# Both sides have deep dead-end arms → open the shortcut
+			if depth_a >= min_loop_dead_end_depth or depth_b >= min_loop_dead_end_depth:
+				# At least one side has a deep dead-end arm → open the shortcut
 				should_open = true
 			else:
 				# Trivial loop → open only by chance

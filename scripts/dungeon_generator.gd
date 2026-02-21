@@ -1183,6 +1183,7 @@ func _assign_room_types() -> void:
 					best_idx = k
 		# Fallback: relax adjacency if no non-adjacent candidate found
 		if best_idx < 0:
+			best_dist = event_eligible.size() + 1
 			for k in range(event_eligible.size()):
 				if not event_assigned_indices.has(k):
 					var dist_to_target: int = absi(k - target_idx)

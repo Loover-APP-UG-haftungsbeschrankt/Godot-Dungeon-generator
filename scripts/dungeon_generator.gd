@@ -1070,7 +1070,7 @@ func _assign_room_types() -> void:
 
 	# Fallback: if not enough periphery rooms, relax the distance constraint
 	if periphery_eligible.size() < chest_room_count + merchant_room_count:
-		push_warning("DungeonGenerator: Not enough rooms at distance >= %d for CHEST/MERCHANT. Using all eligible rooms." % min_chest_merchant_distance)
+		push_warning("DungeonGenerator: Not enough rooms at distance >= %d for CHEST and MERCHANT. Relaxing distance constraint." % min_chest_merchant_distance)
 		periphery_eligible = eligible.duplicate()
 		periphery_eligible.sort_custom(func(a: PlacedRoom, b: PlacedRoom) -> bool:
 			var da: int = distance_map.get(a.position, 0)
@@ -1084,10 +1084,15 @@ func _assign_room_types() -> void:
 
 	# Interleave CHEST and MERCHANT to spread them better
 	var chest_merchant_requests: Array = []
-	for _i in range(chest_room_count):
-		chest_merchant_requests.append(RoomType.CHEST)
-	for _i in range(merchant_room_count):
-		chest_merchant_requests.append(RoomType.MERCHANT)
+	var chest_remaining: int = chest_room_count
+	var merchant_remaining: int = merchant_room_count
+	while chest_remaining > 0 or merchant_remaining > 0:
+		if chest_remaining > 0:
+			chest_merchant_requests.append(RoomType.CHEST)
+			chest_remaining -= 1
+		if merchant_remaining > 0:
+			chest_merchant_requests.append(RoomType.MERCHANT)
+			merchant_remaining -= 1
 
 	for rtype in chest_merchant_requests:
 		var placed: bool = false

@@ -57,6 +57,7 @@ func _ready() -> void:
 	generator.walker_moved.connect(_on_walker_moved)
 	generator.generation_step.connect(_on_generation_step)
 	generator.passages_resolved.connect(_on_passages_resolved)
+	generator.room_types_assigned.connect(_on_room_types_assigned)
 	
 	# Connect toggle all button
 	var toggle_all_button = get_node_or_null("../CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer/ToggleAllButton")
@@ -131,6 +132,10 @@ func _on_generation_complete(success: bool, room_count: int, cell_count: int) ->
 func _on_passages_resolved(opened: int, blocked: int) -> void:
 	cached_passages_opened = opened
 	cached_passages_blocked = blocked
+	queue_redraw()
+
+
+func _on_room_types_assigned() -> void:
 	queue_redraw()
 
 
@@ -534,6 +539,11 @@ func _draw_room(placement: DungeonGenerator.PlacedRoom, offset: Vector2) -> void
 				MetaCell.CellType.BLOCKED:
 					color = Color(0.1, 0.1, 0.1)
 			
+			# Tint floor cells with room type color
+			if cell.cell_type == MetaCell.CellType.FLOOR and placement.room_type != DungeonGenerator.RoomType.NONE:
+				var type_color = DungeonGenerator.get_room_type_color(placement.room_type)
+				color = color.lerp(type_color, 0.35)
+			
 			# Draw cell rectangle
 			draw_rect(Rect2(screen_pos, Vector2(cell_size, cell_size)), color, true)
 			
@@ -544,6 +554,10 @@ func _draw_room(placement: DungeonGenerator.PlacedRoom, offset: Vector2) -> void
 			# Draw connections
 			if draw_connections and cell.cell_type != MetaCell.CellType.BLOCKED:
 				_draw_cell_connections(cell, screen_pos)
+	
+	# Draw room type label at room center
+	if placement.room_type != DungeonGenerator.RoomType.NONE:
+		_draw_room_type_label(placement, offset)
 
 
 func _draw_cell_connections(cell: MetaCell, screen_pos: Vector2) -> void:
@@ -562,11 +576,44 @@ func _draw_cell_connections(cell: MetaCell, screen_pos: Vector2) -> void:
 		draw_line(center, center + Vector2(-line_length, 0), connection_color, line_width)
 
 
+## Draw a room type label at the center of a room
+func _draw_room_type_label(placement: DungeonGenerator.PlacedRoom, offset: Vector2) -> void:
+	var room_center = _get_room_center_grid_pos(placement.position, placement.room)
+	var center_pos = room_center * cell_size + offset
+	
+	var type_name = DungeonGenerator.get_room_type_name(placement.room_type)
+	var type_color = DungeonGenerator.get_room_type_color(placement.room_type)
+	
+	var font = ThemeDB.fallback_font
+	var font_size = 11
+	var text_size = font.get_string_size(type_name, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size)
+	
+	# Draw background pill
+	var padding = Vector2(6, 4)
+	var bg_rect = Rect2(
+		center_pos - text_size * 0.5 - padding,
+		text_size + padding * 2
+	)
+	var bg_color = Color(0, 0, 0, 0.8)
+	draw_rect(bg_rect, bg_color, true)
+	draw_rect(bg_rect, type_color, false, 2.0)
+	
+	# Draw text
+	var text_pos = center_pos - Vector2(text_size.x * 0.5, -font_size * TEXT_VERTICAL_OFFSET_FACTOR)
+	draw_string(font, text_pos, type_name, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, type_color)
+
+
 func _draw_statistics(bounds: Rect2i) -> void:
 	var stats_pos = Vector2(10, 30)
 	var line_height = 20
 	var font = ThemeDB.fallback_font
 	var font_size = 14
+	
+	# Count room types
+	var type_counts: Dictionary = {}
+	for pl in generator.placed_rooms:
+		if pl.room_type != DungeonGenerator.RoomType.NONE:
+			type_counts[pl.room_type] = type_counts.get(pl.room_type, 0) + 1
 	
 	var stats = [
 		"Rooms: %d" % generator.placed_rooms.size(),
@@ -580,6 +627,24 @@ func _draw_statistics(bounds: Rect2i) -> void:
 	
 	for i in range(stats.size()):
 		draw_string(font, stats_pos + Vector2(0, i * line_height), stats[i], HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.WHITE)
+	
+	# Draw room type counts below other stats
+	if not type_counts.is_empty():
+		var type_y = stats_pos.y + stats.size() * line_height + 5
+		var type_order = [
+			DungeonGenerator.RoomType.ENTRANCE,
+			DungeonGenerator.RoomType.BOSS,
+			DungeonGenerator.RoomType.EVENT,
+			DungeonGenerator.RoomType.CHEST,
+			DungeonGenerator.RoomType.MERCHANT
+		]
+		for rtype in type_order:
+			if type_counts.has(rtype):
+				var name = DungeonGenerator.get_room_type_name(rtype)
+				var color = DungeonGenerator.get_room_type_color(rtype)
+				var text = "%s: %d" % [name, type_counts[rtype]]
+				draw_string(font, Vector2(stats_pos.x, type_y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
+				type_y += line_height
 
 
 func _input(event: InputEvent) -> void:

@@ -5,18 +5,30 @@ extends Node
 ## Multiple walkers independently place rooms until a target cell count is reached.
 ## This creates more organic, interconnected dungeons with loops.
 
+## Room type enum for assigning a gameplay purpose to each room
+enum RoomType {
+	NONE = 0,
+	ENTRANCE = 1,
+	BOSS = 2,
+	EVENT = 3,
+	CHEST = 4,
+	MERCHANT = 5
+}
+
 ## Placed room data structure
 class PlacedRoom:
 	var room: MetaRoom
 	var position: Vector2i  # World position (in cells)
 	var rotation: RoomRotator.Rotation
 	var original_template: MetaRoom  # Reference to the original template before cloning/rotation
+	var room_type: int = 0  # RoomType enum value (NONE by default)
 	
 	func _init(p_room: MetaRoom, p_position: Vector2i, p_rotation: RoomRotator.Rotation, p_original_template: MetaRoom):
 		room = p_room
 		position = p_position
 		rotation = p_rotation
 		original_template = p_original_template
+		room_type = 0  # RoomType.NONE
 	
 	## Gets the world position of a cell in this room
 	func get_cell_world_pos(local_x: int, local_y: int) -> Vector2i:
@@ -120,6 +132,19 @@ class RequiredRoomLink:
 ## Example: depth 2 → chain of 3 rooms (entrance + 2 further rooms) required on each side.
 @export_range(1, 10) var min_loop_dead_end_depth: int = 2
 
+## Number of EVENT rooms to assign during generation
+@export_range(0, 50) var event_room_count: int = 3
+
+## Number of CHEST rooms to assign during generation
+@export_range(0, 50) var chest_room_count: int = 2
+
+## Number of MERCHANT rooms to assign during generation
+@export_range(0, 50) var merchant_room_count: int = 1
+
+## Minimum BFS distance from entrance for CHEST and MERCHANT rooms.
+## These room types will only be placed at least this many rooms away from the entrance.
+@export_range(0, 20) var min_chest_merchant_distance: int = 4
+
 ## Maximum recursion depth when validating required connections
 ## Limits how many chained required connections can be validated
 ## Higher values allow more complex room chains but may impact performance
@@ -173,6 +198,9 @@ signal generation_step(iteration: int, total_cells: int)
 ## Signal emitted when the boss room is placed after generation
 ## Parameters: placement (PlacedRoom)
 signal boss_room_placed(placement: PlacedRoom)
+
+## Signal emitted after room types have been assigned
+signal room_types_assigned()
 
 
 ## Generates the dungeon using multi-walker algorithm
@@ -268,6 +296,9 @@ func generate() -> bool:
 	# Place boss room at the farthest point from the entrance
 	if boss_room_template != null:
 		_place_boss_room()
+	
+	# Assign room types (ENTRANCE, BOSS, EVENT, CHEST, MERCHANT)
+	_assign_room_types()
 	
 	generation_complete.emit(success, placed_rooms.size(), cell_count)
 	
@@ -974,6 +1005,252 @@ func _place_boss_room() -> void:
 					return
 
 	push_warning("DungeonGenerator: Could not place boss room — no suitable connection found")
+
+
+# ---------------------------------------------------------------------------
+# Room type assignment
+# ---------------------------------------------------------------------------
+
+## Assigns room types (ENTRANCE, BOSS, EVENT, CHEST, MERCHANT) to placed rooms.
+## Called after passage resolution and boss room placement.
+## Uses BFS distance from entrance to distribute special rooms across the dungeon.
+## CHEST and MERCHANT rooms are placed at the periphery (high BFS distance),
+## at least min_chest_merchant_distance from the entrance, and not graph-adjacent
+## to each other for better distribution.
+func _assign_room_types() -> void:
+	# Reset all room types
+	for pl in placed_rooms:
+		pl.room_type = RoomType.NONE
+
+	# Assign ENTRANCE to first room
+	if not placed_rooms.is_empty():
+		placed_rooms[0].room_type = RoomType.ENTRANCE
+
+	# Assign BOSS to boss room
+	if boss_room != null:
+		boss_room.room_type = RoomType.BOSS
+
+	# Collect eligible rooms (not ENTRANCE, not BOSS, not connection rooms)
+	var eligible: Array[PlacedRoom] = []
+	for pl in placed_rooms:
+		if pl.room_type != RoomType.NONE:
+			continue
+		if pl.room.is_connection_room():
+			continue
+		eligible.append(pl)
+
+	if eligible.is_empty():
+		room_types_assigned.emit()
+		return
+
+	# Use BFS distance to spread special rooms across the dungeon
+	var room_graph: Dictionary = _build_room_graph()
+	var entrance_pos: Vector2i = placed_rooms[0].position
+	var rooms_by_distance: Array[Vector2i] = _bfs_rooms_by_distance(entrance_pos, room_graph)
+
+	# Build position -> BFS distance lookup
+	var distance_map: Dictionary = {}
+	for i in range(rooms_by_distance.size()):
+		distance_map[rooms_by_distance[i]] = i
+
+	# --- Phase 1: Assign CHEST and MERCHANT (periphery, min distance, well-distributed) ---
+	# Filter eligible rooms that meet the minimum distance requirement
+	var periphery_eligible: Array[PlacedRoom] = []
+	for pl in eligible:
+		var dist: int = distance_map.get(pl.position, 0)
+		if dist >= min_chest_merchant_distance:
+			periphery_eligible.append(pl)
+
+	# Sort by: dead-end rooms first (degree 1 in graph), then BFS distance descending.
+	# This ensures CHEST rooms (placed first via interleaving) land in dead-end rooms
+	# at the bottom of the room graph.
+	periphery_eligible.sort_custom(func(a: PlacedRoom, b: PlacedRoom) -> bool:
+		var deg_a: int = room_graph[a.position].size() if room_graph.has(a.position) else 0
+		var deg_b: int = room_graph[b.position].size() if room_graph.has(b.position) else 0
+		# Dead-end rooms (degree 1) come first
+		if (deg_a == 1) != (deg_b == 1):
+			return deg_a == 1
+		var da: int = distance_map.get(a.position, 0)
+		var db: int = distance_map.get(b.position, 0)
+		return da > db
+	)
+
+	# Fallback: if not enough periphery rooms, relax the distance constraint
+	if periphery_eligible.size() < chest_room_count + merchant_room_count:
+		push_warning("DungeonGenerator: Not enough rooms at distance >= %d for CHEST and MERCHANT. Relaxing distance constraint." % min_chest_merchant_distance)
+		periphery_eligible = eligible.duplicate()
+		periphery_eligible.sort_custom(func(a: PlacedRoom, b: PlacedRoom) -> bool:
+			var deg_a: int = room_graph[a.position].size() if room_graph.has(a.position) else 0
+			var deg_b: int = room_graph[b.position].size() if room_graph.has(b.position) else 0
+			if (deg_a == 1) != (deg_b == 1):
+				return deg_a == 1
+			var da: int = distance_map.get(a.position, 0)
+			var db: int = distance_map.get(b.position, 0)
+			return da > db
+		)
+
+	# Place CHEST and MERCHANT from periphery, ensuring no two are graph-adjacent
+	# and none are adjacent to ENTRANCE or BOSS rooms
+	var protected_positions: Dictionary = {}  # ENTRANCE + BOSS positions (never relaxable)
+	if not placed_rooms.is_empty():
+		protected_positions[placed_rooms[0].position] = true
+	if boss_room != null:
+		protected_positions[boss_room.position] = true
+	var assigned_positions: Dictionary = {}  # CHEST/MERCHANT positions (relaxable in fallback)
+	var periphery_used: Dictionary = {}  # index in periphery_eligible -> true
+
+	# Interleave CHEST and MERCHANT to spread them better
+	var chest_merchant_requests: Array = []
+	var chest_remaining: int = chest_room_count
+	var merchant_remaining: int = merchant_room_count
+	while chest_remaining > 0 or merchant_remaining > 0:
+		if chest_remaining > 0:
+			chest_merchant_requests.append(RoomType.CHEST)
+			chest_remaining -= 1
+		if merchant_remaining > 0:
+			chest_merchant_requests.append(RoomType.MERCHANT)
+			merchant_remaining -= 1
+
+	for rtype in chest_merchant_requests:
+		var placed: bool = false
+		for idx in range(periphery_eligible.size()):
+			if periphery_used.has(idx):
+				continue
+			var candidate: PlacedRoom = periphery_eligible[idx]
+			# Check adjacency to ENTRANCE/BOSS (never allowed)
+			if _is_adjacent_to_assigned(candidate.position, protected_positions, room_graph):
+				continue
+			# Check adjacency to other CHEST/MERCHANT
+			if _is_adjacent_to_assigned(candidate.position, assigned_positions, room_graph):
+				continue
+			candidate.room_type = rtype
+			assigned_positions[candidate.position] = true
+			periphery_used[idx] = true
+			placed = true
+			break
+		if not placed:
+			# Relax CHEST/MERCHANT mutual adjacency, but still enforce ENTRANCE/BOSS separation
+			for idx in range(periphery_eligible.size()):
+				if periphery_used.has(idx):
+					continue
+				var candidate: PlacedRoom = periphery_eligible[idx]
+				if _is_adjacent_to_assigned(candidate.position, protected_positions, room_graph):
+					continue
+				candidate.room_type = rtype
+				assigned_positions[candidate.position] = true
+				periphery_used[idx] = true
+				placed = true
+				break
+		if not placed:
+			push_warning("DungeonGenerator: Could not place room of type %s" % get_room_type_name(rtype))
+
+	# --- Phase 2: Assign EVENT rooms (spread across full dungeon, no distance constraint) ---
+	# Re-collect eligible rooms that haven't been assigned yet
+	var event_eligible: Array[PlacedRoom] = []
+	for pl in eligible:
+		if pl.room_type == RoomType.NONE:
+			event_eligible.append(pl)
+
+	# Sort by BFS distance ascending for even distribution
+	event_eligible.sort_custom(func(a: PlacedRoom, b: PlacedRoom) -> bool:
+		var da: int = distance_map.get(a.position, 0)
+		var db: int = distance_map.get(b.position, 0)
+		return da < db
+	)
+
+	# Distribute EVENT rooms evenly, preferring non-adjacent placement
+	var event_placed: int = 0
+	var event_assigned_indices: Dictionary = {}
+	var event_positions: Dictionary = {}  # position -> true (for adjacency checks)
+	for j in range(event_room_count):
+		if event_assigned_indices.size() >= event_eligible.size():
+			break
+		var target_idx: int = 0
+		if event_room_count == 1:
+			target_idx = event_eligible.size() / 2
+		else:
+			target_idx = int(float(j) / float(event_room_count) * float(event_eligible.size()))
+		# First pass: find nearest unassigned index that is NOT adjacent to another EVENT
+		var best_idx: int = -1
+		var best_dist: int = event_eligible.size() + 1
+		for k in range(event_eligible.size()):
+			if not event_assigned_indices.has(k):
+				if _is_adjacent_to_assigned(event_eligible[k].position, event_positions, room_graph):
+					continue
+				var dist_to_target: int = absi(k - target_idx)
+				if dist_to_target < best_dist:
+					best_dist = dist_to_target
+					best_idx = k
+		# Fallback: relax adjacency if no non-adjacent candidate found
+		if best_idx < 0:
+			best_dist = event_eligible.size() + 1
+			for k in range(event_eligible.size()):
+				if not event_assigned_indices.has(k):
+					var dist_to_target: int = absi(k - target_idx)
+					if dist_to_target < best_dist:
+						best_dist = dist_to_target
+						best_idx = k
+		if best_idx >= 0:
+			event_eligible[best_idx].room_type = RoomType.EVENT
+			event_assigned_indices[best_idx] = true
+			event_positions[event_eligible[best_idx].position] = true
+			event_placed += 1
+
+	if event_placed < event_room_count:
+		push_warning("DungeonGenerator: Could only assign %d/%d EVENT rooms" % [event_placed, event_room_count])
+
+	room_types_assigned.emit()
+
+	# Print summary
+	var type_counts: Dictionary = {}
+	for pl in placed_rooms:
+		if pl.room_type != RoomType.NONE:
+			type_counts[pl.room_type] = type_counts.get(pl.room_type, 0) + 1
+	print("DungeonGenerator: Room types assigned — ", type_counts)
+
+
+## Checks whether a room position is graph-adjacent to any already-assigned position
+func _is_adjacent_to_assigned(pos: Vector2i, assigned: Dictionary, room_graph: Dictionary) -> bool:
+	if not room_graph.has(pos):
+		return false
+	for neighbor: Vector2i in (room_graph[pos] as Dictionary).keys():
+		if assigned.has(neighbor):
+			return true
+	return false
+
+
+## Returns the display name for a RoomType enum value
+static func get_room_type_name(rtype: int) -> String:
+	match rtype:
+		RoomType.NONE:
+			return "NONE"
+		RoomType.ENTRANCE:
+			return "ENTRANCE"
+		RoomType.BOSS:
+			return "BOSS"
+		RoomType.EVENT:
+			return "EVENT"
+		RoomType.CHEST:
+			return "CHEST"
+		RoomType.MERCHANT:
+			return "MERCHANT"
+	return "UNKNOWN"
+
+
+## Returns the display color for a RoomType enum value
+static func get_room_type_color(rtype: int) -> Color:
+	match rtype:
+		RoomType.ENTRANCE:
+			return Color(0.2, 0.6, 1.0)   # Blue
+		RoomType.BOSS:
+			return Color(1.0, 0.15, 0.15)  # Red
+		RoomType.EVENT:
+			return Color(0.7, 0.3, 1.0)    # Purple
+		RoomType.CHEST:
+			return Color(1.0, 0.85, 0.0)   # Golden Yellow
+		RoomType.MERCHANT:
+			return Color(0.4, 0.9, 0.4)    # Green
+	return Color.WHITE
 
 
 ## BFS traversal from a starting room position through the room graph.
